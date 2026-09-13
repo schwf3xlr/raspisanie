@@ -10,12 +10,17 @@ import AdminTemplate from './pages/admin/AdminTemplate';
 import AdminDictionaries from './pages/admin/AdminDictionaries';
 import DialogRoot from './components/DialogRoot';
 import { useTheme } from './lib/hooks';
+import { checkForUpdate } from './lib/update-check';
 
 export default function App() {
   useTheme();
 
   useEffect(() => {
     document.title = 'Расписание · СОШ №44';
+    // Проверка обновлений — только в Android-приложении, в браузере no-op.
+    // Небольшая задержка, чтобы UI успел появиться первым.
+    const t = setTimeout(() => { void checkForUpdate(); }, 1500);
+    return () => clearTimeout(t);
   }, []);
 
   return (

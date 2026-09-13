@@ -138,14 +138,95 @@ cd web/android
 
 ---
 
-## 6. Как обновлять после изменений в React-коде
+## 6. Как выпустить новую версию (полный цикл)
 
-Просто:
-```bash
-cd web
-npm run build:android
+Автообновление в приложении уже встроено: при запуске оно читает `https://school.rskbot.ru/downloads/latest.json`, сравнивает с собственной версией и, если есть новее, показывает пользователю модалку «Обновить сейчас / Позже».
+
+Цикл релиза выглядит так:
+
+### 6.1 Изменить versionCode и versionName
+
+Открой `web/android/app/build.gradle`, найди блок `defaultConfig`:
+```gradle
+defaultConfig {
+    applicationId "ru.rskbot.school44.raspisanie"
+    minSdkVersion rootProject.ext.minSdkVersion
+    targetSdkVersion rootProject.ext.targetSdkVersion
+    versionCode 1               ← увеличь на 1 при каждом релизе
+    versionName "1.0.0"          ← смени на новую (1.0.1, 1.1.0, ...)
+    ...
+}
 ```
 
-Потом пересобрать APK (шаги 3 или 5.3) и залить на сервер.
+**Важно:** `versionCode` — целое число, монотонно растёт. Именно по нему сравнивается «новее / не новее». `versionName` — что видит пользователь.
 
-Автообновление в приложении добавим отдельной фазой (Фаза 3 плана) — тогда пользователи будут получать новые APK автоматически.
+### 6.2 Собрать релизный APK
+
+```bash
+cd web
+npm run build:android         # пересобирает React → dist → android/app/src/main/assets
+cd android
+./gradlew.bat assembleRelease
+```
+
+Готовый файл: `web/android/app/build/outputs/apk/release/app-release.apk`.
+
+Переименуй в человеческое имя:
+```bash
+copy "app-release.apk" "raspisanie-1.0.1.apk"
+```
+
+### 6.3 Залить APK на сервер
+
+```powershell
+scp web/android/app/build/outputs/apk/release/raspisanie-1.0.1.apk deploy@159.194.242.97:/var/www/downloads/
+```
+
+### 6.4 Обновить манифест `latest.json`
+
+Это файл, который приложения будут проверять при запуске. Формат:
+
+```json
+{
+  "versionCode": 2,
+  "versionName": "1.0.1",
+  "apkUrl": "https://school.rskbot.ru/downloads/raspisanie-1.0.1.apk",
+  "mandatory": false,
+  "changelog": "Исправили копирование ячеек, добавили эмблему школы"
+}
+```
+
+- `versionCode` **должен совпадать** с тем, что в `build.gradle`
+- `mandatory: true` — если баг критический, тогда пользователь не сможет закрыть модалку без обновления
+- `changelog` — то, что увидит пользователь в модалке; можно кратко
+
+Залей файл на сервер:
+```powershell
+scp latest.json deploy@159.194.242.97:/var/www/downloads/latest.json
+```
+
+Или отредактируй прямо на сервере:
+```bash
+nano /var/www/downloads/latest.json
+```
+
+### 6.5 Проверить
+
+1. Открой на телефоне текущую версию приложения (у пользователя стоит например 1.0.0)
+2. Закрой и открой снова
+3. Через ~1.5 секунды должна появиться модалка «Обновление · 1.0.1» с changelog
+4. Тап «Обновить сейчас» → откроется браузер, начнётся скачивание APK
+5. По завершении — тап на файл, Android спросит «Установить», подтверди
+6. Приложение перезапустится в новой версии
+
+Если пользователь тапнул «Позже» — модалка не будет вылезать снова до следующего повышения `versionCode`.
+
+### 6.6 Как это устроено под капотом
+
+`web/src/lib/update-check.ts` при старте приложения:
+1. Проверяет, что мы в Capacitor (не в браузере) — иначе не работает
+2. Читает свой `versionCode` через `App.getInfo().build`
+3. Загружает `latest.json`
+4. Если удалённая версия больше — показывает confirm-dialog
+5. При согласии открывает `apkUrl` — Android скачивает APK и предлагает установить
+6. Если пользователь отклонил, версия запоминается в localStorage — заново вылезет только для более новой
