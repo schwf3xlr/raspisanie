@@ -1,0 +1,57 @@
+# Node
+node_modules/
+npm-debug.log*
+.pnpm-debug.log*
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# TypeScript compiled artifacts (мы храним только .ts/.tsx)
+web/src/**/*.js
+web/src/**/*.d.ts
+web/vite.config.js
+web/vite.config.d.ts
+!web/postcss.config.js
+!web/tailwind.config.js
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Prisma / SQLite
+api/data/
+*.db
+*.db-journal
+
+# Capacitor Android
+web/android/build/
+web/android/.gradle/
+web/android/app/build/
+web/android/app/release/
+web/android/local.properties
+web/android/app/src/main/assets/public/
+web/android/app/src/main/assets/capacitor.config.json
+web/android/app/src/main/assets/capacitor.plugins.json
+web/android/capacitor-cordova-android-plugins/
+*.keystore
+!school-release.keystore.example
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Старые прототипы (не нужны в git)
+mobile.html
+desktop.html
+app.html

@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- справочники ----------
+
+model Class {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  sortKey   Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Teacher {
+  id        Int      @id @default(autoincrement())
+  fullName  String   @unique
+  shortName String
+  createdAt DateTime @default(now())
+}
+
+model Subject {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Room {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  kind      String   @default("regular")
+  createdAt DateTime @default(now())
+}
+
+// ---------- шаблон (день недели) ----------
+
+model LessonTemplate {
+  id        Int      @id @default(autoincrement())
+  day       String
+  className String
+  number    Int
+  timeStart String
+  timeEnd   String
+  groups    Json
+  updatedAt DateTime @updatedAt
+
+  @@unique([day, className, number])
+  @@index([className])
+}
+
+// ---------- override на конкретную дату ----------
+
+model LessonOverride {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @db.Date
+  className   String
+  number      Int
+  timeStart   String
+  timeEnd     String
+  groups      Json
+  isCancelled Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+
+  @@unique([date, className, number])
+  @@index([date])
+  @@index([className])
+}
+
+// ---------- звонки (по дням недели, глобально) ----------
+
+model TimeSlot {
+  id        Int    @id @default(autoincrement())
+  day       String
+  number    Int
+  timeStart String
+  timeEnd   String
+
+  @@unique([day, number])
+}
+
+// ---------- дистант на конкретную дату ----------
+
+model DistantMark {
+  id           Int      @id @default(autoincrement())
+  date         DateTime @db.Date
+  className    String
+  lessonNumber Int?
+  note         String?
+  createdAt    DateTime @default(now())
+
+  @@index([date])
+  @@index([className])
+}
+
+// ---------- публикация конкретного дня ----------
+
+model PublishedDay {
+  id          Int      @id @default(autoincrement())
+  date        DateTime @unique @db.Date
+  publishedAt DateTime @default(now())
+}
+
+// ---------- админ-сессии ----------
+
+model AdminSession {
+  id        String   @id
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}

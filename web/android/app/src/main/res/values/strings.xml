@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Расписание СОШ №44</string>
+    <string name="title_activity_main">Расписание СОШ №44</string>
+    <string name="package_name">ru.rskbot.school44.raspisanie</string>
+    <string name="custom_url_scheme">ru.rskbot.school44.raspisanie</string>
+</resources>

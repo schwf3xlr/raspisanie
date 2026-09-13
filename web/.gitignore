@@ -1,0 +1,17 @@
+node_modules
+dist
+.env
+.env.local
+
+# Capacitor / Android
+android/build
+android/.gradle
+android/app/build
+android/app/release
+android/local.properties
+android/app/src/main/assets/public
+android/app/src/main/assets/capacitor.config.json
+android/app/src/main/assets/capacitor.plugins.json
+android/capacitor-cordova-android-plugins
+*.keystore
+!school-release.keystore
