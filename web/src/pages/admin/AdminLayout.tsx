@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../../lib/admin-api';
 import SchoolLogo from '../../components/SchoolLogo';
+import { useAppVersion } from '../../lib/version';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [checked, setChecked] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const version = useAppVersion();
 
   useEffect(() => {
     adminApi.me()
@@ -54,6 +56,11 @@ export default function AdminLayout() {
       <button onClick={logout} className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] text-ink-2-light dark:text-ink-2-dark hover:bg-panel-light dark:hover:bg-panel-dark hover:text-ink-light dark:hover:text-ink-dark transition-colors w-full text-left">
         <IconLogout /> Выйти
       </button>
+      {version && (
+        <div className="mt-3 px-3 text-[11px] text-ink-3-light dark:text-ink-3-dark tabular-nums">
+          {version.label}
+        </div>
+      )}
     </div>
   );
 

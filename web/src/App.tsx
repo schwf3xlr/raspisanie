@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import Landing from './pages/Landing';
 import ScheduleApp from './pages/ScheduleApp';
 import AdminLogin from './pages/admin/AdminLogin';
@@ -26,7 +27,8 @@ export default function App() {
   return (
     <>
       <Routes>
-        <Route path="/" element={<Landing />} />
+        {/* В Android-приложении лендинг не показываем — сразу ведём на расписание. */}
+        <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/app" replace /> : <Landing />} />
         <Route path="/app" element={<ScheduleApp />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>

@@ -1,4 +1,5 @@
 import type { ThemeMode } from '../lib/hooks';
+import { useAppVersion } from '../lib/version';
 
 interface Props {
   open: boolean;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function SettingsSheet({ open, onClose, className, onChangeClass, theme, onChangeTheme }: Props) {
+  const version = useAppVersion();
   if (!open) return null;
   return (
     <div
@@ -58,6 +60,12 @@ export default function SettingsSheet({ open, onClose, className, onChangeClass,
         >
           Закрыть
         </button>
+
+        {version && (
+          <div className="mt-4 text-center text-[11.5px] text-ink-3-light dark:text-ink-3-dark font-medium tabular-nums">
+            Расписание СОШ №44 · {version.label}
+          </div>
+        )}
       </div>
       <style>{`@keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
     </div>
