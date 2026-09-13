@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH → pull, build, restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+            cd ~/raspisanie
+            echo "→ git pull"
+            git fetch origin
+            git reset --hard origin/main
+            echo "→ backend build"
+            cd api
+            npm ci
+            npx prisma db push
+            npm run build
+            echo "→ frontend build"
+            cd ../web
+            npm ci
+            npm run build
+            echo "→ restart api"
+            sudo systemctl restart raspisanie-api
+            sudo systemctl reload caddy
+            echo "✓ deploy done"
