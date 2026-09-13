@@ -132,21 +132,27 @@ export function useGridSelection({ classes, numbers, groupsAt, onPaste }: Args) 
   const pastingRef = useRef(false);
   useEffect(() => {
     const onKey = async (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement | null)?.tagName?.toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName?.toLowerCase();
+      const inEditableField = tag === 'input' || tag === 'textarea' || tag === 'select' || target?.isContentEditable;
       const ctrl = e.ctrlKey || e.metaKey;
-      if (ctrl && e.key.toLowerCase() === 'c') {
+      // Используем e.code, а не e.key, чтобы работать в любой раскладке (KeyC = физическая клавиша C).
+      if (ctrl && e.code === 'KeyC') {
+        if (inEditableField) return; // даём браузеру скопировать выделенный текст в инпуте
         e.preventDefault();
         copySelection();
-      } else if (ctrl && e.key.toLowerCase() === 'v') {
+      } else if (ctrl && e.code === 'KeyV') {
+        if (inEditableField) return;
         if (pastingRef.current) return;
         e.preventDefault();
         pastingRef.current = true;
         try { await paste(); } finally { pastingRef.current = false; }
-      } else if (ctrl && e.key.toLowerCase() === 'a') {
+      } else if (ctrl && e.code === 'KeyA') {
+        if (inEditableField) return;
         e.preventDefault();
         selectAll();
       } else if (e.key === 'Escape') {
+        if (inEditableField) return;
         clearSelection();
       }
     };

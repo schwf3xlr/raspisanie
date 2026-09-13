@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useEffect } from 'react';
 import type { AdminGroup, AdminDictionaries } from '../../lib/admin-api';
 
 export interface GridCellData {
@@ -50,6 +50,26 @@ export default function ScheduleGrid({
     : 'bg-bg-light dark:bg-bg-dark';
 
   const totalLeft = NUM_W + TIME_W;
+
+  // Когда пользователь выбирает ячейку и справа открывается drawer, сетка сужается —
+  // и выбранная ячейка (особенно правая, вроде 11А) может уехать за пределы видимости.
+  // Двойной requestAnimationFrame даёт браузеру сделать reflow, потом уже скроллим.
+  useEffect(() => {
+    if (!anchor) return;
+    const key = `${anchor.className}::${anchor.number}`;
+    let selector: string;
+    try { selector = `[data-cell="${CSS.escape(key)}"]`; }
+    catch { selector = `[data-cell='${key.replace(/'/g, "\\'")}']`; }
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(selector);
+        if (el instanceof HTMLElement) {
+          el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+        }
+      });
+    });
+  }, [anchor?.className, anchor?.number]);
 
   return (
     <div className={`flex-1 overflow-auto ${bg}`}>
@@ -144,6 +164,7 @@ export default function ScheduleGrid({
                   const isAnchor = anchor?.className === cls && anchor.number === n;
                   return (
                     <Cell key={cls}
+                      dataKey={key}
                       cell={cell}
                       active={active}
                       isAnchor={isAnchor}
@@ -164,7 +185,8 @@ export default function ScheduleGrid({
   );
 }
 
-function Cell({ cell, active, isAnchor, dicts, subj, teacher, room, onClick }: {
+function Cell({ dataKey, cell, active, isAnchor, dicts, subj, teacher, room, onClick }: {
+  dataKey: string;
   cell: GridCellData | null;
   active: boolean;
   isAnchor: boolean;
@@ -198,6 +220,7 @@ function Cell({ cell, active, isAnchor, dicts, subj, teacher, room, onClick }: {
   return (
     <td
       onClick={onClick}
+      data-cell={dataKey}
       data-conflict={conflict ? 'true' : undefined}
       style={{ height: CELL_MIN_H }}
       className={[
