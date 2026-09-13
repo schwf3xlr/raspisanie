@@ -22,9 +22,11 @@ interface Args {
   groupsAt: (className: string, number: number) => AdminGroup[];
   // как paste'нуть в конкретную ячейку
   onPaste: (className: string, number: number, groups: AdminGroup[]) => Promise<void>;
+  // вызывается один раз после всех paste'ов (для рефреша данных)
+  onAfterPaste?: () => Promise<void> | void;
 }
 
-export function useGridSelection({ classes, numbers, groupsAt, onPaste }: Args) {
+export function useGridSelection({ classes, numbers, groupsAt, onPaste, onAfterPaste }: Args) {
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [anchor, setAnchor] = useState<Anchor | null>(null);
   const [clipboard, setClipboard] = useState<Clipboard | null>(null);
@@ -126,8 +128,11 @@ export function useGridSelection({ classes, numbers, groupsAt, onPaste }: Args) 
       await onPaste(tc, tn, cell.groups);
       pasted++;
     }
+    if (pasted > 0 && onAfterPaste) {
+      try { await onAfterPaste(); } catch { /* refresh недоступен — не блокируем paste */ }
+    }
     return { pasted };
-  }, [clipboard, anchor, classes, numbers, classIdx, numberIdx, onPaste]);
+  }, [clipboard, anchor, classes, numbers, classIdx, numberIdx, onPaste, onAfterPaste]);
 
   const pastingRef = useRef(false);
   useEffect(() => {

@@ -76,6 +76,7 @@ export default function AdminTemplate() {
     numbers,
     groupsAt: effectiveGroups,
     onPaste: savePasted,
+    onAfterPaste: refresh,
   });
 
   useEffect(() => { sel.clearSelection(); }, [day]); // eslint-disable-line react-hooks/exhaustive-deps

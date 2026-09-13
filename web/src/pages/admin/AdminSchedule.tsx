@@ -106,6 +106,7 @@ export default function AdminSchedule() {
     numbers,
     groupsAt: effectiveGroups,
     onPaste: savePasted,
+    onAfterPaste: refresh,
   });
 
   useEffect(() => { sel.clearSelection(); }, [dateIso]); // eslint-disable-line react-hooks/exhaustive-deps
