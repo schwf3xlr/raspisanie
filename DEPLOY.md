@@ -279,9 +279,12 @@ school.rskbot.ru {
         reverse_proxy 127.0.0.1:3001
     }
 
-    # Скачивание APK и latest.json
+    # Скачивание APK и latest.json.
+    # CORS-заголовок нужен, чтобы приложение в Capacitor (origin https://localhost)
+    # могло прочитать latest.json для автообновления.
     handle /downloads/* {
         uri strip_prefix /downloads
+        header Access-Control-Allow-Origin *
         root * /var/www/downloads
         file_server browse
     }

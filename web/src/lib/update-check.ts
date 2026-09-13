@@ -18,22 +18,27 @@ interface Manifest {
 export async function checkForUpdate(): Promise<void> {
   if (!Capacitor.isNativePlatform()) return;
 
+  // eslint-disable-next-line no-console
+  const log = (...args: unknown[]) => console.log('[update-check]', ...args);
+
   try {
     const info = await App.getInfo();
     const currentCode = Number(info.build) || 0;
+    log('current version:', info.version, 'build:', info.build, `→ manifest URL: ${MANIFEST_URL}`);
 
     const res = await fetch(MANIFEST_URL, { cache: 'no-cache' });
-    if (!res.ok) return;
+    if (!res.ok) { log('manifest fetch failed:', res.status, res.statusText); return; }
     const m = (await res.json()) as Manifest;
+    log('manifest:', m);
 
-    if (!m?.versionCode || !m.apkUrl) return;
-    if (m.versionCode <= currentCode) return;
+    if (!m?.versionCode || !m.apkUrl) { log('manifest missing versionCode or apkUrl'); return; }
+    if (m.versionCode <= currentCode) { log('already up-to-date'); return; }
 
     // Если пользователь уже отклонил именно эту версию — не спрашиваем снова,
     // пока не выйдет ещё более новая.
     if (!m.mandatory) {
       const dismissed = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
-      if (m.versionCode <= dismissed) return;
+      if (m.versionCode <= dismissed) { log('previously dismissed:', dismissed); return; }
     }
 
     const changelog = m.changelog?.trim() || 'Появилась новая версия приложения.';
