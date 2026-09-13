@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import type { ThemeMode } from '../lib/hooks';
 import { useAppVersion } from '../lib/version';
 
@@ -54,9 +55,18 @@ export default function SettingsSheet({ open, onClose, className, onChangeClass,
           </div>
         </div>
 
+        <Link
+          to="/admin/login"
+          onClick={onClose}
+          className="mt-4 w-full flex items-center justify-center gap-2 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark py-3 rounded-2xl font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Админ-панель
+        </Link>
+
         <button
           onClick={onClose}
-          className="mt-4 w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark py-3 rounded-2xl font-semibold text-ink-light dark:text-ink-dark"
+          className="mt-2 w-full bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark py-3 rounded-2xl font-semibold"
         >
           Закрыть
         </button>
