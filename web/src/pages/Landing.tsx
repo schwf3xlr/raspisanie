@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { api } from '../lib/api';
 import type { School } from '../lib/types';
+import SchoolLogo from '../components/SchoolLogo';
 
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
@@ -226,12 +227,7 @@ export default function Landing() {
 }
 
 function SchoolMark({ small = false }: { small?: boolean }) {
-  const size = small ? 'w-7 h-7 text-[13px]' : 'w-9 h-9 text-[16px]';
-  return (
-    <div className={[size, 'rounded-[10px] bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark grid place-items-center font-serif font-medium tabular-nums'].join(' ')}>
-      44
-    </div>
-  );
+  return <SchoolLogo size={small ? 28 : 36} />;
 }
 
 const FEATURES = [

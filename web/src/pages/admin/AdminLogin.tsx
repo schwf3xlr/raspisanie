@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { adminApi } from '../../lib/admin-api';
+import SchoolLogo from '../../components/SchoolLogo';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
@@ -27,9 +28,7 @@ export default function AdminLogin() {
     <div className="min-h-screen bg-bg-light dark:bg-bg-dark grid place-items-center px-6">
       <div className="w-full max-w-sm">
         <Link to="/" className="flex items-center gap-3 mb-10 w-fit">
-          <div className="w-10 h-10 rounded-xl bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark grid place-items-center font-serif font-medium text-[18px] tabular-nums">
-            44
-          </div>
+          <SchoolLogo size={40} />
           <div className="leading-tight">
             <div className="font-semibold text-[14px]">СОШ №44</div>
             <div className="text-ink-3-light dark:text-ink-3-dark text-[12px]">Расписание</div>

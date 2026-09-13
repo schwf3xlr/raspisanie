@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../../lib/admin-api';
+import SchoolLogo from '../../components/SchoolLogo';
 
 export default function AdminLayout() {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ export default function AdminLayout() {
       {/* Mobile top bar */}
       <header className="md:hidden sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 backdrop-blur-md border-b border-line-light dark:border-line-dark px-4 h-14 flex items-center justify-between">
         <Link to="/admin" className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-[9px] bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark grid place-items-center font-serif font-medium text-[14px] tabular-nums">44</div>
+          <SchoolLogo size={32} />
           <div className="leading-[1.15]">
             <div className="font-semibold text-[13px]">СОШ №44</div>
             <div className="text-ink-3-light dark:text-ink-3-dark text-[11px]">Админ</div>
@@ -96,9 +97,7 @@ export default function AdminLayout() {
       {/* Desktop sidebar */}
       <aside className="hidden md:flex w-60 shrink-0 border-r border-line-light dark:border-line-dark px-5 py-6 flex-col">
         <Link to="/" className="flex items-center gap-3 mb-8">
-          <div className="w-9 h-9 rounded-[10px] bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark grid place-items-center font-serif font-medium text-[16px] tabular-nums">
-            44
-          </div>
+          <SchoolLogo size={36} />
           <div className="leading-[1.15]">
             <div className="font-semibold text-[14px]">СОШ №44</div>
             <div className="text-ink-3-light dark:text-ink-3-dark text-[11.5px]">Админ-панель</div>

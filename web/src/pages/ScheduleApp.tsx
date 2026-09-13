@@ -16,6 +16,7 @@ import { useLocalStorage, useTheme, useTick } from '../lib/hooks';
 import LessonRow from '../components/LessonRow';
 import ClassPicker from '../components/ClassPicker';
 import SettingsSheet from '../components/SettingsSheet';
+import SchoolLogo from '../components/SchoolLogo';
 
 export default function ScheduleApp() {
   const navigate = useNavigate();
@@ -91,9 +92,7 @@ export default function ScheduleApp() {
       <div className="max-w-2xl mx-auto px-6 pb-10 pt-2 md:pt-6">
         <header className="sticky top-0 bg-bg-light dark:bg-bg-dark z-10 flex justify-between items-center py-5 pb-2">
           <div className="flex items-center gap-2.5 text-[14px] text-ink-2-light dark:text-ink-2-dark font-medium">
-            <div className="w-[26px] h-[26px] rounded-lg bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark grid place-items-center font-serif font-medium text-[13px] tabular-nums">
-              44
-            </div>
+            <SchoolLogo size={26} className="rounded-lg" />
             <span>Класс <b className="text-ink-light dark:text-ink-dark font-semibold">{savedClass}</b></span>
           </div>
           <div className="flex gap-1.5 items-center">
