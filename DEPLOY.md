@@ -116,7 +116,7 @@ sudo -u postgres psql
 
 В psql:
 ```sql
-CREATE USER raspisanie WITH PASSWORD 'ПРИДУМАЙ-СЛОЖНЫЙ-ПАРОЛЬ';
+CREATE USER raspisanie WITH PASSWORD 'Kfmerkdnf290K';
 CREATE DATABASE raspisanie OWNER raspisanie;
 GRANT ALL PRIVILEGES ON DATABASE raspisanie TO raspisanie;
 \q
@@ -152,7 +152,7 @@ sudo apt install -y caddy
 Если код в GitHub (можно приватный репозиторий):
 ```bash
 cd ~
-git clone https://github.com/твой-логин/raspisanie.git
+git clone https://github.com/schwf3xlr/raspisanie.git
 cd raspisanie
 ```
 
@@ -187,7 +187,7 @@ NODE_ENV=production
 
 Сгенерировать случайный секрет:
 ```bash
-openssl rand -base64 32
+openssl rand -base64 32  # tIpr30iJG7eyBbOQB2vpkwevtzMec+T+kZCxNr9fEx8=
 ```
 
 Установить зависимости и применить миграции:
@@ -279,8 +279,9 @@ school.rskbot.ru {
         reverse_proxy 127.0.0.1:3001
     }
 
-    # Скачивание APK
+    # Скачивание APK и latest.json
     handle /downloads/* {
+        uri strip_prefix /downloads
         root * /var/www/downloads
         file_server browse
     }
