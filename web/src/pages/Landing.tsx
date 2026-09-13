@@ -4,9 +4,15 @@ import { api } from '../lib/api';
 import type { School } from '../lib/types';
 import SchoolLogo from '../components/SchoolLogo';
 
+interface ApkManifest {
+  versionName: string;
+  apkUrl: string;
+}
+
 export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [school, setSchool] = useState<School | null>(null);
+  const [apk, setApk] = useState<ApkManifest | null>(null);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -16,6 +22,15 @@ export default function Landing() {
 
   useEffect(() => {
     api.school().then(setSchool).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch('/downloads/latest.json', { cache: 'no-cache' })
+      .then(r => (r.ok ? r.json() : null))
+      .then((m: ApkManifest | null) => {
+        if (m?.apkUrl && m.versionName) setApk({ apkUrl: m.apkUrl, versionName: m.versionName });
+      })
+      .catch(() => {});
   }, []);
 
   const shortName = school?.short ?? 'СОШ №44';
@@ -154,10 +169,23 @@ export default function Landing() {
                 Скачай файл, открой в файловом менеджере. Первый раз Android спросит «разрешить установку из этого источника» — соглашайся.
               </p>
               <div className="flex gap-2 flex-wrap mt-auto">
-                <button className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark font-semibold text-[14px] opacity-50 cursor-not-allowed">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 3v14m-6-6l6 6 6-6M4 21h16"/></svg>
-                  Скоро — APK
-                </button>
+                {apk ? (
+                  <a
+                    href={apk.apkUrl}
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark font-semibold text-[14px] hover:opacity-90 transition-opacity"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 3v14m-6-6l6 6 6-6M4 21h16"/></svg>
+                    Скачать APK · {apk.versionName}
+                  </a>
+                ) : (
+                  <button
+                    className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark font-semibold text-[14px] opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 3v14m-6-6l6 6 6-6M4 21h16"/></svg>
+                    Скоро — APK
+                  </button>
+                )}
                 <Link to="/app" className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-transparent border border-line-light dark:border-line-dark font-semibold text-[14px]">
                   Открыть в браузере
                 </Link>
