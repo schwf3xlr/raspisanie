@@ -37,12 +37,12 @@ export default function Landing() {
   const fullName = school?.full ?? 'БОУ г. Омска «СОШ № 44 им. А.В. Салугина»';
 
   return (
-    <div className="bg-bg-soft dark:bg-bg-dark text-ink-light dark:text-ink-dark">
+    <div className="bg-bg-light dark:bg-bg-dark text-ink-light dark:text-ink-dark">
       <nav
         className={[
           'sticky top-0 z-10 flex items-center justify-between px-5 md:px-10 py-3.5 md:py-4 backdrop-blur-md transition-colors',
           scrolled ? 'border-b border-line-light dark:border-line-dark' : 'border-b border-transparent',
-          'bg-bg-soft/85 dark:bg-bg-dark/85',
+          'bg-bg-light/85 dark:bg-bg-dark/85',
         ].join(' ')}
       >
         <Link to="/" className="flex items-center gap-3">
@@ -125,7 +125,7 @@ export default function Landing() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(f => (
-              <div key={f.title} className="bg-bg-soft dark:bg-bg-dark border border-line-light dark:border-line-dark rounded-2xl p-6 md:p-7 flex flex-col hover:border-accent/40 dark:hover:border-accent-dark/40 transition-colors">
+              <div key={f.title} className="bg-bg-light dark:bg-bg-dark border border-line-light dark:border-line-dark rounded-2xl p-6 md:p-7 flex flex-col hover:border-accent/40 dark:hover:border-accent-dark/40 transition-colors">
                 <div className="w-11 h-11 rounded-xl bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark grid place-items-center mb-5">
                   {f.icon}
                 </div>
@@ -137,7 +137,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section id="download" className="py-14 md:py-28 px-5 md:px-10">
+      <section id="download" className="bg-panel-light dark:bg-panel-dark border-t border-line-light dark:border-line-dark py-14 md:py-28 px-5 md:px-10">
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl mb-10 md:mb-14">
             <div className="text-[12px] font-semibold tracking-[.14em] uppercase text-accent dark:text-accent-dark mb-4">
@@ -153,7 +153,7 @@ export default function Landing() {
 
           <div className="grid gap-4 md:grid-cols-2">
             {/* Android */}
-            <div className="bg-bg-soft dark:bg-bg-dark border border-line-light dark:border-line-dark rounded-2xl p-6 md:p-8 flex flex-col gap-5">
+            <div className="bg-bg-light dark:bg-bg-dark border border-line-light dark:border-line-dark rounded-2xl p-6 md:p-8 flex flex-col gap-5">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-[#3ddc84]/15 dark:bg-[#3ddc84]/10 grid place-items-center shrink-0">
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="#3ddc84">
@@ -196,7 +196,7 @@ export default function Landing() {
             </div>
 
             {/* iPhone */}
-            <div className="bg-bg-soft dark:bg-bg-dark border border-line-light dark:border-line-dark rounded-2xl p-6 md:p-8 flex flex-col gap-5">
+            <div className="bg-bg-light dark:bg-bg-dark border border-line-light dark:border-line-dark rounded-2xl p-6 md:p-8 flex flex-col gap-5">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-ink-light/8 dark:bg-white/8 grid place-items-center shrink-0 [background:rgba(0,0,0,.06)] dark:[background:rgba(255,255,255,.08)]">
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className="text-ink-light dark:text-ink-dark">
