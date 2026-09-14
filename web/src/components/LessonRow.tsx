@@ -71,11 +71,6 @@ export default function LessonRow({ lesson, isToday, distantDay = false, teacher
                   Замена
                 </span>
               )}
-              {timeMoved && !changed && !distant && !now && i === 0 && (
-                <span className="inline-block bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 text-[10.5px] font-bold tracking-[.06em] uppercase px-2 py-[3px] rounded-full ml-2.5 align-[3px]">
-                  Другое время
-                </span>
-              )}
             </div>
             <div className={['text-[13.5px] mt-1.5 flex gap-2.5 items-center flex-wrap', dim ? 'text-ink-3-light dark:text-ink-3-dark' : 'text-ink-2-light dark:text-ink-2-dark'].join(' ')}>
               {teacherMode && lesson.className && i === 0 && (

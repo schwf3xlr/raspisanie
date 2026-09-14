@@ -130,16 +130,10 @@ export default function FullGridPage() {
           </div>
         )}
         {data?.published && data.bellChanges && data.bellChanges.length > 0 && (
-          <div className="mt-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-300/60 dark:border-yellow-800/50 rounded-xl px-3 py-2 flex items-start gap-2.5">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-700 dark:text-yellow-300 shrink-0 mt-0.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
-            <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark tabular-nums leading-relaxed">
-              <b className="text-yellow-800 dark:text-yellow-200">Изменены звонки:</b>{' '}
-              {data.bellChanges.map((b, i) => (
-                <span key={b.number}>
-                  {i > 0 && ' · '}
-                  <b className="text-ink-light dark:text-ink-dark">{b.number}-й</b> {b.timeStart}-{b.timeEnd}
-                </span>
-              ))}
+          <div className="mt-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-300/60 dark:border-yellow-800/50 rounded-xl px-3 py-2 flex items-center gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-700 dark:text-yellow-300 shrink-0"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark leading-relaxed">
+              <b className="text-yellow-800 dark:text-yellow-200">Изменены звонки.</b> Обратите внимание на обозначенное время.
             </div>
           </div>
         )}
@@ -179,13 +173,27 @@ export default function FullGridPage() {
             <tbody>
               {data.numbers.map(n => {
                 const t = data.timeByNumber.find(x => x.number === n);
+                const bellChanged = data.bellChanges?.some(b => b.number === n) ?? false;
                 return (
                   <tr key={n}>
-                    <th className="sticky left-0 z-10 bg-bg-light dark:bg-bg-dark px-2 py-2 border-b border-r border-line-light dark:border-line-dark text-center w-[68px] md:w-[92px]">
-                      <div className="font-serif text-[18px] leading-none tabular-nums">{n}</div>
-                      <div className="text-[10px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1 font-medium leading-tight">
+                    <th className={[
+                      'sticky left-0 z-10 px-2 py-2 border-b border-r border-line-light dark:border-line-dark text-center w-[68px] md:w-[92px]',
+                      bellChanged ? 'bg-yellow-100/80 dark:bg-yellow-900/30' : 'bg-bg-light dark:bg-bg-dark',
+                    ].join(' ')}
+                      title={bellChanged ? 'Звонок изменён только на эту дату' : undefined}
+                    >
+                      <div className={[
+                        'font-serif text-[18px] leading-none tabular-nums',
+                        bellChanged ? 'text-yellow-800 dark:text-yellow-200' : '',
+                      ].join(' ')}>{n}</div>
+                      <div className={[
+                        'tabular-nums mt-1 font-medium leading-tight',
+                        bellChanged
+                          ? 'text-[10px] text-yellow-800 dark:text-yellow-200'
+                          : 'text-[10px] text-ink-3-light dark:text-ink-3-dark',
+                      ].join(' ')}>
                         {t?.timeStart}
-                        {t?.timeEnd && <div className="text-[9.5px] opacity-70">{t.timeEnd}</div>}
+                        {t?.timeEnd && <div className={bellChanged ? 'text-[9.5px] text-yellow-700/80 dark:text-yellow-300/80' : 'text-[9.5px] opacity-70'}>{t.timeEnd}</div>}
                       </div>
                     </th>
                     {data.classes.map(cls => {
@@ -202,7 +210,6 @@ export default function FullGridPage() {
                         <td key={cls} className={[
                           'border-b border-r border-line-light dark:border-line-dark px-2 py-2 align-top',
                           l.fromOverride ? 'bg-accent-soft/40 dark:bg-accent-soft-dark/40' : '',
-                          l.timeOverridden && !l.fromOverride ? 'bg-yellow-100/60 dark:bg-yellow-900/25' : '',
                           l.distant ? 'bg-distant-soft dark:bg-distant-soft-dark' : '',
                         ].join(' ')}>
                           {l.groups.map((g, gi) => (

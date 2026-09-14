@@ -266,14 +266,8 @@ export default function ScheduleApp() {
                   <div className="font-semibold text-yellow-800 dark:text-yellow-200 text-[14px] leading-tight">
                     Изменены звонки
                   </div>
-                  <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed tabular-nums">
-                    {currentDay.bellChanges.map((b, i) => (
-                      <span key={b.number}>
-                        {i > 0 && ' · '}
-                        <b className="text-ink-light dark:text-ink-dark">{b.number}-й</b> {b.timeStart}-{b.timeEnd}
-                        <span className="text-ink-3-light dark:text-ink-3-dark"> (было {b.standardStart}-{b.standardEnd})</span>
-                      </span>
-                    ))}
+                  <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed">
+                    Обратите внимание на обозначенное время.
                   </div>
                 </div>
               </div>

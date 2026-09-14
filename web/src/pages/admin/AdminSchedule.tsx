@@ -335,6 +335,11 @@ export default function AdminSchedule() {
           onClickNumber={n => { setNumberPopover(n); setClassPopover(null); sel.clearSelection(); }}
           dicts={dicts}
           tint="week"
+          isBellChanged={(n) => {
+            const std = standardTimeFor(n);
+            const actual = timeFor(n);
+            return !!std.timeStart && !!actual.timeStart && (actual.timeStart !== std.timeStart || actual.timeEnd !== std.timeEnd);
+          }}
         />
 
         {sel.isSingle && sel.anchor && (

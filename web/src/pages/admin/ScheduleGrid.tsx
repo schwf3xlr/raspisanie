@@ -28,6 +28,8 @@ interface GridProps {
   onClickNumber?: (n: number) => void;
   dicts: AdminDictionaries | null;
   tint?: 'template' | 'week';
+  /** true - для этого номера урока звонки изменены на эту дату; подсвечиваем только квадрат времени. */
+  isBellChanged?: (n: number) => boolean;
 }
 
 const NUM_W = 44;
@@ -48,7 +50,7 @@ function roomNameOf(dicts: AdminDictionaries | null, id: number | null): string 
 
 export default function ScheduleGrid({
   classes, numbers, timeFor, dataFor, selection, anchor, onCellClick,
-  onClickClass, onClickNumber, dicts, tint,
+  onClickClass, onClickNumber, dicts, tint, isBellChanged,
 }: GridProps) {
   const bg = tint === 'template'
     ? 'bg-[#faf6ee] dark:bg-[#141210]'
@@ -138,6 +140,7 @@ export default function ScheduleGrid({
         <tbody>
           {numbers.map(n => {
             const t = timeFor(n);
+            const bellChanged = !!isBellChanged?.(n);
             return (
               <tr key={n}>
                 <td
@@ -157,12 +160,20 @@ export default function ScheduleGrid({
                         <div className="font-serif text-[24px] font-medium leading-none tabular-nums">{n}</div>
                       )}
                     </div>
-                    <div className="flex-1 flex items-center justify-center text-center px-1">
-                      <div className="text-[12px] text-ink-2-light dark:text-ink-2-dark tabular-nums font-medium leading-tight">
+                    <div className={[
+                      'flex-1 flex items-center justify-center text-center px-1',
+                      bellChanged ? 'bg-yellow-100/80 dark:bg-yellow-900/30 ring-1 ring-inset ring-yellow-400/50 dark:ring-yellow-600/40' : '',
+                    ].join(' ')}
+                      title={bellChanged ? 'Звонок изменён только на эту дату' : undefined}
+                    >
+                      <div className={[
+                        'text-[12px] tabular-nums font-medium leading-tight',
+                        bellChanged ? 'text-yellow-800 dark:text-yellow-200' : 'text-ink-2-light dark:text-ink-2-dark',
+                      ].join(' ')}>
                         {t.timeStart ? (
                           <>
                             <div>{t.timeStart}</div>
-                            <div className="text-ink-3-light dark:text-ink-3-dark mt-0.5">{t.timeEnd}</div>
+                            <div className={bellChanged ? 'text-yellow-700/80 dark:text-yellow-300/80 mt-0.5' : 'text-ink-3-light dark:text-ink-3-dark mt-0.5'}>{t.timeEnd}</div>
                           </>
                         ) : <span className="italic text-ink-3-light dark:text-ink-3-dark">-</span>}
                       </div>
@@ -228,9 +239,9 @@ function Cell({ dataKey, cell, active, isAnchor, dicts, subj, teacher, room, onC
       ? 'bg-distant-soft dark:bg-distant-soft-dark'
       : changed
         ? 'bg-accent-soft/50 dark:bg-accent-soft-dark/50'
-        : timeMoved
-          ? 'bg-yellow-100/70 dark:bg-yellow-900/25'
-          : '';
+        : '';
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  void timeMoved; // сама ячейка урока НЕ подсвечивается - подсвечивается только квадрат времени слева
 
   return (
     <td
