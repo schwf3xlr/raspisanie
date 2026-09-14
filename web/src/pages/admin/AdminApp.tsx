@@ -1,23 +1,53 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { adminApi, type ApkStatus, type ApkFileInfo } from '../../lib/admin-api';
+import { adminApi, type ApkStatus, type ApkFileInfo, type ChangelogEntry } from '../../lib/admin-api';
 import { confirmDialog } from '../../lib/dialog';
 
 export default function AdminApp() {
   const [status, setStatus] = useState<ApkStatus | null>(null);
+  const [changelog, setChangelog] = useState<ChangelogEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const s = await adminApi.apkStatus();
+      const [s, cl] = await Promise.all([
+        adminApi.apkStatus(),
+        adminApi.changelog().catch(() => ({ entries: [] as ChangelogEntry[] })),
+      ]);
       setStatus(s);
+      setChangelog(cl.entries);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  const deleteChangelogEntry = async (e: ChangelogEntry) => {
+    const ok = await confirmDialog({
+      title: `Удалить запись ${e.versionName}?`,
+      message: 'Запись пропадёт из «Истории обновлений» на сайте и в приложении.',
+      confirmText: 'Удалить', danger: true,
+    });
+    if (!ok) return;
+    try {
+      await adminApi.deleteChangelogEntry(e.versionCode);
+      await refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
+  const saveChangelogText = async (e: ChangelogEntry, next: string) => {
+    if (!changelog) return;
+    const list = changelog.map(x => x.versionCode === e.versionCode ? { ...x, changelog: next } : x);
+    try {
+      const r = await adminApi.saveChangelog(list);
+      setChangelog(r.entries);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  };
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -362,6 +392,63 @@ export default function AdminApp() {
               </button>
             )}
           </div>
+        </section>
+
+        {/* ============= История версий (changelog.json) ============= */}
+        <section className="border border-line-light dark:border-line-dark rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
+            <h2 className="font-serif text-[20px]">История версий</h2>
+            <a href="/changelog" target="_blank" rel="noreferrer"
+              className="text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark underline underline-offset-2">
+              Открыть публичную страницу ↗
+            </a>
+          </div>
+          <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] mb-4">
+            При каждой публикации версии выше запись автоматически добавляется сюда. Тексты можно редактировать - изменения сразу видны в «Истории обновлений» на сайте и в приложении.
+          </p>
+          {changelog == null ? (
+            <div className="text-ink-3-light dark:text-ink-3-dark text-[13.5px]">Загружаем…</div>
+          ) : changelog.length === 0 ? (
+            <div className="text-ink-3-light dark:text-ink-3-dark text-[13.5px]">Пока нет ни одной записи.</div>
+          ) : (
+            <ul className="space-y-4">
+              {changelog.map(e => (
+                <li key={e.versionCode} className="rounded-xl border border-line-light dark:border-line-dark p-4">
+                  <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="font-serif text-[18px] font-medium tabular-nums">{e.versionName}</div>
+                      <span className="text-[10.5px] font-bold tracking-wider uppercase text-ink-3-light dark:text-ink-3-dark tabular-nums">
+                        code {e.versionCode}
+                      </span>
+                      {e.mandatory && (
+                        <span className="text-[10.5px] font-bold tracking-wider uppercase text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/60 px-1.5 py-0.5 rounded">
+                          Критическое
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums">
+                      {new Date(e.publishedAt).toLocaleString('ru')}
+                    </div>
+                  </div>
+                  <textarea
+                    defaultValue={e.changelog}
+                    onBlur={ev => {
+                      const next = ev.target.value;
+                      if (next !== e.changelog) void saveChangelogText(e, next);
+                    }}
+                    rows={Math.max(3, e.changelog.split('\n').length + 1)}
+                    className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-3 py-2 text-[13.5px] leading-relaxed focus:outline-none focus:border-ink-light dark:focus:border-ink-dark"
+                  />
+                  <div className="mt-2 flex justify-end">
+                    <button onClick={() => deleteChangelogEntry(e)}
+                      className="text-[12px] font-semibold text-red-500 hover:text-red-600 dark:hover:text-red-400 px-2">
+                      Удалить запись
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
       </div>
     </div>

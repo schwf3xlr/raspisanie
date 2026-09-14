@@ -12,11 +12,22 @@ export interface Lesson {
   timeStart: string;
   timeEnd: string;
   groups: Group[];
+  // true - реальная замена: изменился предмет / учитель / кабинет.
   fromOverride: boolean;
+  // true - время урока отличается от стандартного расписания звонков.
+  timeOverridden: boolean;
   isCancelled: boolean;
   distant: { lessonLevel: boolean; note: string | null } | null;
   // В учительском виде - класс, где идёт этот урок.
   className?: string;
+}
+
+export interface BellChange {
+  number: number;
+  timeStart: string;
+  timeEnd: string;
+  standardStart: string;
+  standardEnd: string;
 }
 
 export interface Teacher {
@@ -41,6 +52,7 @@ export interface DayAllResponse {
   timeByNumber: Array<{ number: number; timeStart: string; timeEnd: string }>;
   cells: DayAllCell[];
   distantAllDayByClass: Record<string, string | null>;
+  bellChanges: BellChange[];
 }
 export interface SavedViewer {
   mode: ViewMode;
@@ -57,6 +69,7 @@ export interface Day {
   isDistantAllDay: boolean;
   distantAllDayNote: string | null;
   lessons: Lesson[];
+  bellChanges: BellChange[];
 }
 
 export interface Week {

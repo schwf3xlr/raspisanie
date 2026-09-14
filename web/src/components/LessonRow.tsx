@@ -15,6 +15,7 @@ export default function LessonRow({ lesson, isToday, distantDay = false, teacher
   const now = st.status === 'now';
   const distant = distantDay || !!lesson.distant;
   const changed = lesson.fromOverride;
+  const timeMoved = !!lesson.timeOverridden;
 
   const barCls = now
     ? 'bg-accent dark:bg-accent-dark'
@@ -28,11 +29,19 @@ export default function LessonRow({ lesson, isToday, distantDay = false, teacher
 
   return (
     <div className="grid gap-4 md:gap-6 items-stretch py-4 md:py-5 grid-cols-[64px_3px_1fr] md:grid-cols-[100px_3px_1fr] border-t border-line-2-light dark:border-line-2-dark first:border-t-0">
-      <div className="flex flex-col justify-between py-0.5 tabular-nums">
-        <div className={['text-[15px] md:text-[20px] font-semibold -tracking-[.01em]', dim ? 'text-ink-3-light dark:text-ink-3-dark' : 'text-ink-light dark:text-ink-dark'].join(' ')}>
+      <div className={[
+        'flex flex-col justify-between py-0.5 tabular-nums',
+        timeMoved ? 'bg-yellow-100/80 dark:bg-yellow-900/30 rounded-lg px-1.5 -mx-1.5 ring-1 ring-yellow-400/50 dark:ring-yellow-600/40' : '',
+      ].join(' ')}>
+        <div className={['text-[15px] md:text-[20px] font-semibold -tracking-[.01em]',
+          dim ? 'text-ink-3-light dark:text-ink-3-dark'
+              : timeMoved ? 'text-yellow-800 dark:text-yellow-200'
+              : 'text-ink-light dark:text-ink-dark'].join(' ')}>
           {lesson.timeStart}
         </div>
-        <div className="text-[12.5px] md:text-[13px] font-medium text-ink-3-light dark:text-ink-3-dark mt-auto md:mt-1.5">
+        <div className={['text-[12.5px] md:text-[13px] font-medium mt-auto md:mt-1.5',
+          timeMoved ? 'text-yellow-700/80 dark:text-yellow-300/80'
+                    : 'text-ink-3-light dark:text-ink-3-dark'].join(' ')}>
           {lesson.timeEnd}
         </div>
       </div>
@@ -60,6 +69,11 @@ export default function LessonRow({ lesson, isToday, distantDay = false, teacher
               {changed && !distant && !now && i === 0 && (
                 <span className="inline-block bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark text-[10.5px] font-bold tracking-[.06em] uppercase px-2 py-[3px] rounded-full ml-2.5 align-[3px]">
                   Замена
+                </span>
+              )}
+              {timeMoved && !changed && !distant && !now && i === 0 && (
+                <span className="inline-block bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 text-[10.5px] font-bold tracking-[.06em] uppercase px-2 py-[3px] rounded-full ml-2.5 align-[3px]">
+                  Другое время
                 </span>
               )}
             </div>

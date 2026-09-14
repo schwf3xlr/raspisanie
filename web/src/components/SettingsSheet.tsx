@@ -109,6 +109,9 @@ export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, t
         )}
 
         <div className="pt-4 border-t border-line-light dark:border-line-dark mt-0 flex flex-col gap-2 text-[12.5px] text-ink-3-light dark:text-ink-3-dark">
+          <Link to="/changelog" onClick={onClose} className="hover:text-ink-light dark:hover:text-ink-dark">
+            История обновлений
+          </Link>
           <Link to="/privacy" onClick={onClose} className="hover:text-ink-light dark:hover:text-ink-dark">
             Политика конфиденциальности
           </Link>

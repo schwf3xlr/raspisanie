@@ -1,5 +1,13 @@
 import type { DayAllResponse, School, Teacher, Week } from './types';
 
+export interface PublicChangelogEntry {
+  versionCode: number;
+  versionName: string;
+  publishedAt: string;
+  changelog: string;
+  mandatory: boolean;
+}
+
 const BASE = (import.meta.env.VITE_API_BASE ?? '') + '/api';
 
 async function json<T>(url: string, init?: RequestInit): Promise<T> {
@@ -26,6 +34,7 @@ export const api = {
     json<Week>(`/week-teacher/${teacherId}${dateIso ? `?date=${dateIso}` : ''}`),
   dayAll: (dateIso?: string) =>
     json<DayAllResponse>(`/day-all${dateIso ? `?date=${dateIso}` : ''}`),
+  changelog: () => json<{ entries: PublicChangelogEntry[] }>('/changelog'),
 
   pushRegister: (token: string, opts: { platform?: string; className?: string | null; teacherId?: number | null }) =>
     json<{ ok: boolean }>('/push/register', {

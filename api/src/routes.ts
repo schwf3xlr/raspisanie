@@ -10,6 +10,7 @@ import {
   workdaysOfWeek,
 } from './date-utils.js';
 import type {
+  BellChangeDTO,
   DayDTO,
   GroupRef,
   GroupResolved,
@@ -46,6 +47,20 @@ function resolveGroups(groups: GroupRef[], dicts: { subj: Map<number, string>; t
 function parseGroups(raw: unknown): GroupRef[] {
   if (!Array.isArray(raw)) return [];
   return raw.filter(x => x && typeof x === 'object') as GroupRef[];
+}
+
+// Строгое сравнение двух наборов групп по составу.
+// Возвращает true, если override меняет только время (группы совпадают).
+function sameGroups(a: GroupRef[], b: GroupRef[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const g1 = a[i]!;
+    const g2 = b[i]!;
+    if (g1.subjectId !== g2.subjectId) return false;
+    if ((g1.teacherId ?? null) !== (g2.teacherId ?? null)) return false;
+    if ((g1.roomId ?? null) !== (g2.roomId ?? null)) return false;
+  }
+  return true;
 }
 
 export async function registerRoutes(app: FastifyInstance) {
@@ -157,6 +172,11 @@ export async function registerRoutes(app: FastifyInstance) {
         lesson: LessonDTO | null;
       }> = [];
 
+      // Сводка изменений звонков на день (одна запись на номер урока).
+      const bellChanges: BellChangeDTO[] = [];
+      const seenBell = new Set<number>();
+      const slotByNum = new Map(timeSlots.map(s => [s.number, s]));
+
       if (published && dayName) {
         for (const cls of classes) {
           for (const n of sortedNumbers) {
@@ -165,10 +185,30 @@ export async function registerRoutes(app: FastifyInstance) {
             const source = override ?? template;
             if (!source) { cells.push({ className: cls.name, number: n, lesson: null }); continue; }
             if (override?.isCancelled) { cells.push({ className: cls.name, number: n, lesson: null }); continue; }
-            const groups = resolveGroups(parseGroups(source.groups), dicts);
+            const rawGroups = parseGroups(source.groups);
+            const groups = resolveGroups(rawGroups, dicts);
             if (groups.length === 0) { cells.push({ className: cls.name, number: n, lesson: null }); continue; }
             const wholeDay = distantWholeByClass.has(cls.name);
             const lessonNote = distantByClassNum.get(`${cls.name}::${n}`);
+
+            const templateGroups = template ? parseGroups(template.groups) : null;
+            const isRealReplacement = !!override && (!templateGroups || !sameGroups(rawGroups, templateGroups));
+
+            const slot = slotByNum.get(n);
+            const stdStart = slot?.timeStart ?? (template?.timeStart ?? '');
+            const stdEnd   = slot?.timeEnd   ?? (template?.timeEnd   ?? '');
+            const timeOverridden = !!(source.timeStart && source.timeEnd && (source.timeStart !== stdStart || source.timeEnd !== stdEnd));
+            if (timeOverridden && !seenBell.has(n)) {
+              seenBell.add(n);
+              bellChanges.push({
+                number: n,
+                timeStart: source.timeStart,
+                timeEnd: source.timeEnd,
+                standardStart: stdStart,
+                standardEnd: stdEnd,
+              });
+            }
+
             cells.push({
               className: cls.name,
               number: n,
@@ -177,7 +217,8 @@ export async function registerRoutes(app: FastifyInstance) {
                 timeStart: source.timeStart,
                 timeEnd: source.timeEnd,
                 groups,
-                fromOverride: !!override,
+                fromOverride: isRealReplacement,
+                timeOverridden,
                 isCancelled: false,
                 distant: wholeDay || lessonNote !== undefined
                   ? { lessonLevel: true, note: lessonNote ?? distantWholeByClass.get(cls.name) ?? null }
@@ -193,6 +234,8 @@ export async function registerRoutes(app: FastifyInstance) {
       const timeByNumber = new Map<number, { timeStart: string; timeEnd: string }>();
       for (const s of timeSlots) timeByNumber.set(s.number, { timeStart: s.timeStart, timeEnd: s.timeEnd });
 
+      bellChanges.sort((a, b) => a.number - b.number);
+
       return {
         date: dateIso,
         day: dayName,
@@ -206,6 +249,7 @@ export async function registerRoutes(app: FastifyInstance) {
         })),
         cells,
         distantAllDayByClass: Object.fromEntries(distantWholeByClass),
+        bellChanges,
       };
     },
   );
@@ -228,7 +272,9 @@ export async function registerRoutes(app: FastifyInstance) {
       const weekStartDb = toDbDate(toISODate(weekStart));
       const weekEndDb = toDbDate(toISODate(weekEnd));
 
-      const [published, overrides, distant, dicts] = await Promise.all([
+      const uniqueDays = [...new Set(workdays.map(d => dayNameFromDate(d)!).filter(Boolean))];
+
+      const [published, overrides, distant, dicts, templates, timeSlots] = await Promise.all([
         db.publishedDay.findMany({
           where: { date: { gte: weekStartDb, lte: weekEndDb } },
           select: { date: true },
@@ -240,6 +286,8 @@ export async function registerRoutes(app: FastifyInstance) {
           where: { className, date: { gte: weekStartDb, lte: weekEndDb } },
         }),
         loadDicts(),
+        db.lessonTemplate.findMany({ where: { className, day: { in: uniqueDays } } }),
+        db.timeSlot.findMany({ where: { day: { in: uniqueDays } } }),
       ]);
 
       const publishedSet = new Set(published.map(p => dbDateToISO(p.date)));
@@ -252,14 +300,12 @@ export async function registerRoutes(app: FastifyInstance) {
         const key = dbDateToISO(d.date);
         (distantByDay.get(key) ?? distantByDay.set(key, []).get(key)!).push(d);
       }
-
-      const todayIso = toISODate(new Date());
-      const uniqueDays = [...new Set(workdays.map(d => dayNameFromDate(d)!).filter(Boolean))];
-      const templates = await db.lessonTemplate.findMany({
-        where: { className, day: { in: uniqueDays } },
-      });
       const templateByDayNum = new Map<string, typeof templates[number]>();
       for (const t of templates) templateByDayNum.set(`${t.day}::${t.number}`, t);
+      const slotByDayNum = new Map<string, typeof timeSlots[number]>();
+      for (const s of timeSlots) slotByDayNum.set(`${s.day}::${s.number}`, s);
+
+      const todayIso = toISODate(new Date());
 
       const days: DayDTO[] = workdays.map(d => {
         const iso = toISODate(d);
@@ -273,6 +319,8 @@ export async function registerRoutes(app: FastifyInstance) {
         }
 
         const dayLessons: LessonDTO[] = [];
+        const bellChanges: BellChangeDTO[] = [];
+        const seenBellChanges = new Set<number>();
         if (isPublished && dayName) {
           const numbers = new Set<number>();
           for (const t of templates) if (t.day === dayName) numbers.add(t.number);
@@ -288,14 +336,38 @@ export async function registerRoutes(app: FastifyInstance) {
             const source = override ?? template;
             if (!source) continue;
             if (override?.isCancelled) continue;
-            const groups = resolveGroups(parseGroups(source.groups), dicts);
+            const rawGroups = parseGroups(source.groups);
+            const groups = resolveGroups(rawGroups, dicts);
             if (groups.length === 0) continue;
+
+            // «Замена» - только если реально изменились группы (или урок вообще новый).
+            const templateGroups = template ? parseGroups(template.groups) : null;
+            const isRealReplacement = !!override && (!templateGroups || !sameGroups(rawGroups, templateGroups));
+
+            // Стандартное время - из TimeSlot этого дня недели.
+            const slot = slotByDayNum.get(`${dayName}::${n}`);
+            const stdStart = slot?.timeStart ?? (template?.timeStart ?? '');
+            const stdEnd   = slot?.timeEnd   ?? (template?.timeEnd   ?? '');
+            const timeOverridden = !!(source.timeStart && source.timeEnd && (source.timeStart !== stdStart || source.timeEnd !== stdEnd));
+
+            if (timeOverridden && !seenBellChanges.has(n)) {
+              seenBellChanges.add(n);
+              bellChanges.push({
+                number: n,
+                timeStart: source.timeStart,
+                timeEnd: source.timeEnd,
+                standardStart: stdStart,
+                standardEnd: stdEnd,
+              });
+            }
+
             dayLessons.push({
               number: n,
               timeStart: source.timeStart,
               timeEnd: source.timeEnd,
               groups,
-              fromOverride: !!override,
+              fromOverride: isRealReplacement,
+              timeOverridden,
               isCancelled: false,
               distant: lessonDistant.has(n)
                 ? { lessonLevel: true, note: lessonDistant.get(n)!.note }
@@ -312,6 +384,7 @@ export async function registerRoutes(app: FastifyInstance) {
           isDistantAllDay: !!wholeDay,
           distantAllDayNote: wholeDay?.note ?? null,
           lessons: dayLessons,
+          bellChanges,
         };
       });
 
@@ -346,7 +419,7 @@ export async function registerRoutes(app: FastifyInstance) {
       const uniqueDays = [...new Set(workdays.map(d => dayNameFromDate(d)!).filter(Boolean))];
 
       // Тянем всё, что может касаться этого учителя. Фильтруем в памяти по teacherId в JSON-груп.
-      const [published, allTemplates, allOverrides, allDistant, dicts] = await Promise.all([
+      const [published, allTemplates, allOverrides, allDistant, dicts, allSlots] = await Promise.all([
         db.publishedDay.findMany({
           where: { date: { gte: weekStartDb, lte: weekEndDb } },
           select: { date: true },
@@ -355,7 +428,10 @@ export async function registerRoutes(app: FastifyInstance) {
         db.lessonOverride.findMany({ where: { date: { gte: weekStartDb, lte: weekEndDb } } }),
         db.distantMark.findMany({ where: { date: { gte: weekStartDb, lte: weekEndDb } } }),
         loadDicts(),
+        db.timeSlot.findMany({ where: { day: { in: uniqueDays } } }),
       ]);
+      const slotByDayNum2 = new Map<string, typeof allSlots[number]>();
+      for (const s of allSlots) slotByDayNum2.set(`${s.day}::${s.number}`, s);
 
       const publishedSet = new Set(published.map(p => dbDateToISO(p.date)));
 
@@ -380,6 +456,8 @@ export async function registerRoutes(app: FastifyInstance) {
         const isPublished = publishedSet.has(iso);
 
         const dayLessons: LessonDTO[] = [];
+        const bellChanges: BellChangeDTO[] = [];
+        const seenBellChanges = new Set<number>();
         if (isPublished && dayName) {
           // Для каждого класса собираем эффективный источник (override → template).
           const perClassKeys = new Map<string, Set<number>>(); // className → numbers
@@ -407,12 +485,33 @@ export async function registerRoutes(app: FastifyInstance) {
               if (myGroups.length === 0) continue;
               const resolved = resolveGroups(myGroups, dicts);
               const dist = distantForClassDate(cls, iso, n);
+
+              // «Замена» - только если реально изменились группы.
+              const templateGroups = template ? parseGroups(template.groups) : null;
+              const isRealReplacement = !!override && (!templateGroups || !sameGroups(groupsRaw, templateGroups));
+
+              const slot = slotByDayNum2.get(`${dayName}::${n}`);
+              const stdStart = slot?.timeStart ?? (template?.timeStart ?? '');
+              const stdEnd   = slot?.timeEnd   ?? (template?.timeEnd   ?? '');
+              const timeOverridden = !!(source.timeStart && source.timeEnd && (source.timeStart !== stdStart || source.timeEnd !== stdEnd));
+              if (timeOverridden && !seenBellChanges.has(n)) {
+                seenBellChanges.add(n);
+                bellChanges.push({
+                  number: n,
+                  timeStart: source.timeStart,
+                  timeEnd: source.timeEnd,
+                  standardStart: stdStart,
+                  standardEnd: stdEnd,
+                });
+              }
+
               dayLessons.push({
                 number: n,
                 timeStart: source.timeStart,
                 timeEnd: source.timeEnd,
                 groups: resolved,
-                fromOverride: !!override,
+                fromOverride: isRealReplacement,
+                timeOverridden,
                 isCancelled: false,
                 distant: dist ? { lessonLevel: true, note: dist.note ?? null } : null,
                 // расширение: показываем ученикам класс, где идёт урок
@@ -421,6 +520,7 @@ export async function registerRoutes(app: FastifyInstance) {
             }
           }
           dayLessons.sort((a, b) => a.number - b.number || (a.className ?? '').localeCompare(b.className ?? ''));
+          bellChanges.sort((a, b) => a.number - b.number);
         }
 
         return {
@@ -431,6 +531,7 @@ export async function registerRoutes(app: FastifyInstance) {
           isDistantAllDay: false,          // для учителя понятие «весь день дистант» неактуально
           distantAllDayNote: null,
           lessons: dayLessons,
+          bellChanges,
         };
       });
 

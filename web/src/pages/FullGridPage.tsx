@@ -51,13 +51,19 @@ export default function FullGridPage() {
 
   return (
     <div className="min-h-screen bg-bg-light dark:bg-bg-dark flex flex-col">
-      <header className="px-4 md:px-8 py-3 md:py-4 border-b border-line-light dark:border-line-dark flex items-center gap-3 flex-wrap">
-        <Link to="/app" className="flex items-center gap-2.5 text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark">
-          <SchoolLogo size={26} className="rounded-lg" />
-          <span className="font-semibold text-[14px] hidden sm:inline">Расписание СОШ №44</span>
+      <header className="px-3 md:px-8 py-3 md:py-4 border-b border-line-light dark:border-line-dark flex items-center gap-3">
+        <Link to="/app"
+          className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-line-light dark:border-line-dark text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark hover:bg-panel-light dark:hover:bg-panel-dark font-semibold text-[13px]">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <span className="hidden sm:inline">К моему расписанию</span>
+          <span className="sm:hidden">Назад</span>
         </Link>
-        <span className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] hidden sm:inline">·</span>
-        <span className="text-[13.5px] font-semibold">Общая таблица</span>
+        <div className="min-w-0 flex items-center gap-2.5">
+          <SchoolLogo size={24} className="rounded-lg hidden sm:block" />
+          <span className="font-semibold text-[14px] hidden md:inline">Расписание СОШ №44</span>
+          <span className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] hidden md:inline">·</span>
+          <span className="text-[14px] font-semibold truncate">Общая таблица</span>
+        </div>
       </header>
 
       {/* Навигация по неделям и дням недели */}
@@ -123,6 +129,20 @@ export default function FullGridPage() {
             Не опубликовано
           </div>
         )}
+        {data?.published && data.bellChanges && data.bellChanges.length > 0 && (
+          <div className="mt-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-300/60 dark:border-yellow-800/50 rounded-xl px-3 py-2 flex items-start gap-2.5">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-700 dark:text-yellow-300 shrink-0 mt-0.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+            <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark tabular-nums leading-relaxed">
+              <b className="text-yellow-800 dark:text-yellow-200">Сегодня изменены звонки:</b>{' '}
+              {data.bellChanges.map((b, i) => (
+                <span key={b.number}>
+                  {i > 0 && ' · '}
+                  <b className="text-ink-light dark:text-ink-dark">{b.number}-й</b> {b.timeStart}-{b.timeEnd}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {error && !data && <div className="p-10 text-red-500">{error}</div>}
@@ -182,6 +202,7 @@ export default function FullGridPage() {
                         <td key={cls} className={[
                           'border-b border-r border-line-light dark:border-line-dark px-2 py-2 align-top',
                           l.fromOverride ? 'bg-accent-soft/40 dark:bg-accent-soft-dark/40' : '',
+                          l.timeOverridden && !l.fromOverride ? 'bg-yellow-100/60 dark:bg-yellow-900/25' : '',
                           l.distant ? 'bg-distant-soft dark:bg-distant-soft-dark' : '',
                         ].join(' ')}>
                           {l.groups.map((g, gi) => (

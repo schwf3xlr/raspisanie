@@ -144,6 +144,14 @@ export interface ApkStatus {
   files: ApkFileInfo[];
 }
 
+export interface ChangelogEntry {
+  versionCode: number;
+  versionName: string;
+  publishedAt: string;
+  changelog: string;
+  mandatory: boolean;
+}
+
 export const adminApi = {
   login: (login: string, password: string) =>
     req<{ ok: true; role: AdminRole; login: string; displayName: string | null }>(
@@ -193,6 +201,13 @@ export const adminApi = {
   apkSaveManifest: (m: { versionCode: number; versionName: string; apkUrl: string; changelog?: string; mandatory?: boolean }) =>
     req<{ ok: true; manifest: ApkManifest }>('/apk/manifest', { method: 'PUT', body: JSON.stringify(m) }),
   apkDeleteManifest: () => req<{ ok: true }>('/apk/manifest', { method: 'DELETE' }),
+
+  // История версий (только tech)
+  changelog: () => req<{ entries: ChangelogEntry[] }>('/changelog'),
+  saveChangelog: (entries: ChangelogEntry[]) =>
+    req<{ ok: true; entries: ChangelogEntry[] }>('/changelog', { method: 'PUT', body: JSON.stringify({ entries }) }),
+  deleteChangelogEntry: (versionCode: number) =>
+    req<{ ok: true }>(`/changelog/${versionCode}`, { method: 'DELETE' }),
 
   stats: () => req<AdminStats>('/stats'),
 

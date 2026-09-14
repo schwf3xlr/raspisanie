@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { requireRole } from './auth.js';
 
 const MANIFEST_NAME = 'latest.json';
+const CHANGELOG_NAME = 'changelog.json';
 const APK_MAX_BYTES = 100 * 1024 * 1024; // 100 МБ - c запасом
 // Только .apk файлы с безопасными именами: буквы, цифры, точка, дефис, подчёркивание.
 const SAFE_NAME_RE = /^[A-Za-z0-9._-]+\.apk$/;
@@ -19,6 +20,14 @@ interface Manifest {
   changelog?: string;
   mandatory?: boolean;
   updatedAt?: string;
+}
+
+interface ChangelogEntry {
+  versionCode: number;
+  versionName: string;
+  publishedAt: string;   // ISO
+  changelog: string;
+  mandatory: boolean;
 }
 
 function assertConfigured(): string {
@@ -43,6 +52,33 @@ async function readManifest(dir: string): Promise<Manifest | null> {
 async function writeManifest(dir: string, m: Manifest): Promise<void> {
   const payload: Manifest = { ...m, updatedAt: new Date().toISOString() };
   await fs.writeFile(path.join(dir, MANIFEST_NAME), JSON.stringify(payload, null, 2) + '\n', 'utf8');
+}
+
+async function readChangelog(dir: string): Promise<ChangelogEntry[]> {
+  try {
+    const raw = await fs.readFile(path.join(dir, CHANGELOG_NAME), 'utf8');
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.filter(e => e && typeof e.versionCode === 'number' && typeof e.versionName === 'string');
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'ENOENT') return [];
+    throw err;
+  }
+}
+
+async function writeChangelog(dir: string, list: ChangelogEntry[]): Promise<void> {
+  // Отсортируем от новых к старым.
+  const sorted = [...list].sort((a, b) => b.versionCode - a.versionCode);
+  await fs.writeFile(path.join(dir, CHANGELOG_NAME), JSON.stringify(sorted, null, 2) + '\n', 'utf8');
+}
+
+// Добавляет / обновляет запись в changelog для конкретной версии.
+async function upsertChangelogEntry(dir: string, entry: ChangelogEntry): Promise<void> {
+  const list = await readChangelog(dir);
+  const idx = list.findIndex(e => e.versionCode === entry.versionCode);
+  if (idx >= 0) list[idx] = entry;
+  else list.push(entry);
+  await writeChangelog(dir, list);
 }
 
 interface ApkFileInfo {
@@ -156,6 +192,7 @@ export async function registerApkRoutes(app: FastifyInstance) {
   );
 
   // Публикация / редактирование latest.json.
+  // Автоматически добавляет / обновляет запись в changelog.json.
   app.put<{ Body: Partial<Manifest> }>(
     '/api/admin/apk/manifest',
     { preHandler: (req, reply) => requireRole('tech')(req, reply) },
@@ -168,14 +205,18 @@ export async function registerApkRoutes(app: FastifyInstance) {
       if (!Number.isFinite(versionCode) || versionCode <= 0) return reply.code(400).send({ error: 'versionCode: положительное число' });
       if (!versionName) return reply.code(400).send({ error: 'versionName обязателен' });
       if (!apkUrl) return reply.code(400).send({ error: 'apkUrl обязателен' });
-      const m: Manifest = {
+      const changelog = typeof b.changelog === 'string' ? b.changelog : '';
+      const mandatory = !!b.mandatory;
+      const m: Manifest = { versionCode, versionName, apkUrl, changelog: changelog || undefined, mandatory };
+      await writeManifest(dir, m);
+      // Auto-upsert в changelog
+      await upsertChangelogEntry(dir, {
         versionCode,
         versionName,
-        apkUrl,
-        changelog: typeof b.changelog === 'string' ? b.changelog : undefined,
-        mandatory: !!b.mandatory,
-      };
-      await writeManifest(dir, m);
+        publishedAt: new Date().toISOString(),
+        changelog,
+        mandatory,
+      });
       const written = await readManifest(dir);
       return { ok: true, manifest: written };
     },
@@ -187,6 +228,61 @@ export async function registerApkRoutes(app: FastifyInstance) {
     async () => {
       const dir = assertConfigured();
       await fs.unlink(path.join(dir, MANIFEST_NAME)).catch(() => {});
+      return { ok: true };
+    },
+  );
+
+  // ---------- Changelog ----------
+  // Публичный список версий.
+  app.get('/api/changelog', async () => {
+    if (!config.apkDir) return { entries: [] as ChangelogEntry[] };
+    const list = await readChangelog(config.apkDir).catch(() => []);
+    return { entries: list };
+  });
+
+  // Управление (только tech).
+  app.get(
+    '/api/admin/changelog',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async () => {
+      const dir = assertConfigured();
+      return { entries: await readChangelog(dir) };
+    },
+  );
+
+  // Полностью заменить список (например, переставить порядок или отредактировать текст).
+  app.put<{ Body: { entries: ChangelogEntry[] } }>(
+    '/api/admin/changelog',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req, reply) => {
+      const dir = assertConfigured();
+      const entries = req.body?.entries;
+      if (!Array.isArray(entries)) return reply.code(400).send({ error: 'entries: массив' });
+      const clean: ChangelogEntry[] = [];
+      for (const e of entries) {
+        if (!e || typeof e.versionCode !== 'number' || !e.versionName) continue;
+        clean.push({
+          versionCode: Number(e.versionCode),
+          versionName: String(e.versionName),
+          publishedAt: typeof e.publishedAt === 'string' ? e.publishedAt : new Date().toISOString(),
+          changelog: typeof e.changelog === 'string' ? e.changelog : '',
+          mandatory: !!e.mandatory,
+        });
+      }
+      await writeChangelog(dir, clean);
+      return { ok: true, entries: await readChangelog(dir) };
+    },
+  );
+
+  app.delete<{ Params: { versionCode: string } }>(
+    '/api/admin/changelog/:versionCode',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req, reply) => {
+      const dir = assertConfigured();
+      const vc = Number(req.params.versionCode);
+      if (!Number.isFinite(vc)) return reply.code(400).send({ error: 'bad versionCode' });
+      const list = await readChangelog(dir);
+      await writeChangelog(dir, list.filter(e => e.versionCode !== vc));
       return { ok: true };
     },
   );

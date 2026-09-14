@@ -257,6 +257,27 @@ export default function ScheduleApp() {
                 </div>
               </div>
             )}
+            {currentDay.bellChanges && currentDay.bellChanges.length > 0 && (
+              <div className="mb-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-300/60 dark:border-yellow-800/50 rounded-2xl px-4 py-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-yellow-400 dark:bg-yellow-500 text-white grid place-items-center shrink-0">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-semibold text-yellow-800 dark:text-yellow-200 text-[14px] leading-tight">
+                    Сегодня изменены звонки
+                  </div>
+                  <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed tabular-nums">
+                    {currentDay.bellChanges.map((b, i) => (
+                      <span key={b.number}>
+                        {i > 0 && ' · '}
+                        <b className="text-ink-light dark:text-ink-dark">{b.number}-й</b> {b.timeStart}-{b.timeEnd}
+                        <span className="text-ink-3-light dark:text-ink-3-dark"> (было {b.standardStart}-{b.standardEnd})</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="pt-2 pb-5">
               {currentDay.lessons.length === 0 ? (
                 <div className="py-16 text-center text-ink-3-light dark:text-ink-3-dark">
@@ -275,7 +296,7 @@ export default function ScheduleApp() {
                       ? 'Первого урока нет'
                       : `Первых ${skipped}-х уроков нет`;
                     return (
-                      <div className="mb-3 bg-accent-soft dark:bg-accent-soft-dark border border-accent/20 dark:border-accent-dark/30 rounded-2xl px-4 py-3 flex items-start gap-3">
+                      <div className="mb-3 bg-accent-soft dark:bg-accent-soft-dark border border-accent/20 dark:border-accent-dark/30 rounded-2xl px-4 py-3 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-accent dark:bg-accent-dark text-white grid place-items-center shrink-0">
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                         </div>
@@ -284,7 +305,7 @@ export default function ScheduleApp() {
                             {label}
                           </div>
                           <div className="text-[13px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed">
-                            К {first.number}-му уроку — приходите к <b className="tabular-nums text-ink-light dark:text-ink-dark">{first.timeStart}</b>.
+                            К {first.number}-му уроку - приходите к <b className="tabular-nums text-ink-light dark:text-ink-dark">{first.timeStart}</b>.
                           </div>
                         </div>
                       </div>

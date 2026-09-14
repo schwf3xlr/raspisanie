@@ -14,6 +14,7 @@ import AdminApp from './pages/admin/AdminApp';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import FullGridPage from './pages/FullGridPage';
+import ChangelogPage from './pages/ChangelogPage';
 import DialogRoot from './components/DialogRoot';
 import CookieBanner from './components/CookieBanner';
 import { useTheme } from './lib/hooks';
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/all" element={<FullGridPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
+        <Route path="/changelog" element={<ChangelogPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />

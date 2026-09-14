@@ -247,6 +247,7 @@ export default function Landing() {
               <li><Link to="/app" className="hover:text-ink-light dark:hover:text-ink-dark">Открыть расписание</Link></li>
               <li><a href="#features" className="hover:text-ink-light dark:hover:text-ink-dark">Возможности</a></li>
               <li><a href="#download" className="hover:text-ink-light dark:hover:text-ink-dark">Скачать</a></li>
+              <li><Link to="/changelog" className="hover:text-ink-light dark:hover:text-ink-dark">История обновлений</Link></li>
             </ul>
           </div>
 

@@ -52,11 +52,13 @@ export async function checkForUpdate(opts: { silent?: boolean } = {}): Promise<U
       return { status: 'up-to-date', current: info.version, latest: m };
     }
 
-    const changelog = m.changelog?.trim() || 'Появилась новая версия приложения.';
+    // Показываем короткое приглашение вместо всего changelog'а.
+    // Полный список изменений живёт на отдельной странице /changelog.
+    const message = `Доступна новая версия приложения. Список изменений — на странице «История обновлений».`;
 
     const ok = await confirmDialog({
       title: `Обновление · ${m.versionName}`,
-      message: changelog,
+      message,
       confirmText: 'Обновить сейчас',
       cancelText: 'Позже',
       banner: m.mandatory

@@ -18,11 +18,23 @@ export interface LessonDTO {
   timeStart: string;
   timeEnd: string;
   groups: GroupResolved[];
+  // true - override реально меняет состав (предмет / учитель / кабинет).
+  // НЕ считается заменой ситуация, когда сдвинули только время звонков.
   fromOverride: boolean;
+  // true - время урока отличается от стандартного расписания звонков.
+  timeOverridden: boolean;
   isCancelled: boolean;
   distant: { lessonLevel: boolean; note: string | null } | null;
-  // Только для учительского вида — в каком классе учитель ведёт этот урок.
+  // Только для учительского вида - в каком классе учитель ведёт этот урок.
   className?: string;
+}
+
+export interface BellChangeDTO {
+  number: number;
+  timeStart: string;    // фактическое время на эту дату
+  timeEnd: string;
+  standardStart: string;// стандартное время из шаблона звонков
+  standardEnd: string;
 }
 
 export interface DayDTO {
@@ -33,6 +45,8 @@ export interface DayDTO {
   isDistantAllDay: boolean;
   distantAllDayNote: string | null;
   lessons: LessonDTO[];
+  // Список номеров уроков, у которых на этот день сдвинуты звонки.
+  bellChanges: BellChangeDTO[];
 }
 
 export interface WeekResponse {
