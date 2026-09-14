@@ -121,6 +121,29 @@ export interface AdminUser {
   createdAt: string;
 }
 
+export interface ApkFileInfo {
+  name: string;
+  size: number;
+  updatedAt: string;
+  url: string;
+}
+export interface ApkManifest {
+  versionCode: number;
+  versionName: string;
+  apkUrl: string;
+  changelog?: string;
+  mandatory?: boolean;
+  updatedAt?: string;
+}
+export interface ApkStatus {
+  configured: boolean;
+  apkDir: string | null;
+  publicBase: string;
+  error?: string;
+  manifest: ApkManifest | null;
+  files: ApkFileInfo[];
+}
+
 export const adminApi = {
   login: (login: string, password: string) =>
     req<{ ok: true; role: AdminRole; login: string; displayName: string | null }>(
@@ -138,6 +161,38 @@ export const adminApi = {
     req<AdminUser>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   deleteUser: (id: number) =>
     req<{ ok: true }>(`/users/${id}`, { method: 'DELETE' }),
+
+  // APK-релизы (только tech)
+  apkStatus: () => req<ApkStatus>('/apk/status'),
+  apkUpload: (file: File, name: string | null, onProgress?: (percent: number) => void) => {
+    return new Promise<{ ok: true; file: ApkFileInfo }>((resolve, reject) => {
+      const url = BASE + '/apk/upload' + (name ? `?name=${encodeURIComponent(name)}` : '');
+      const fd = new FormData();
+      fd.append('file', file);
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.withCredentials = true;
+      xhr.upload.onprogress = (e) => {
+        if (onProgress && e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      };
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+          else reject(new Error(data?.error || `HTTP ${xhr.status}`));
+        } catch (err) {
+          reject(err instanceof Error ? err : new Error(String(err)));
+        }
+      };
+      xhr.onerror = () => reject(new Error('Сеть недоступна'));
+      xhr.send(fd);
+    });
+  },
+  apkDelete: (name: string) =>
+    req<{ ok: true }>(`/apk/file/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  apkSaveManifest: (m: { versionCode: number; versionName: string; apkUrl: string; changelog?: string; mandatory?: boolean }) =>
+    req<{ ok: true; manifest: ApkManifest }>('/apk/manifest', { method: 'PUT', body: JSON.stringify(m) }),
+  apkDeleteManifest: () => req<{ ok: true }>('/apk/manifest', { method: 'DELETE' }),
 
   stats: () => req<AdminStats>('/stats'),
 

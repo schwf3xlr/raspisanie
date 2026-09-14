@@ -184,9 +184,18 @@ ADMIN_PASSWORD=придумай-надёжный-пароль-для-админ�
 SESSION_SECRET=длинная-случайная-строка-минимум-32-символа
 NODE_ENV=production
 
+# Управление APK через панель (страница «Приложение»).
+# Без этих переменных страница остаётся, но кнопки загрузки/редактирования будут неактивны.
+APK_DIR=/var/www/downloads
+APK_PUBLIC_BASE=https://school.rskbot.ru/downloads
+
 # Push (опционально; без него бэкенд просто не шлёт уведомления)
 # FCM_SERVICE_ACCOUNT_FILE=/home/deploy/raspisanie/api/fcm-service-account.json
 ```
+
+`/var/www/downloads` должен принадлежать пользователю `deploy`
+(создаётся в шаге 12 - если нет: `sudo mkdir -p /var/www/downloads && sudo chown -R deploy:deploy /var/www/downloads`),
+иначе бэкенд не сможет туда писать APK-файлы из панели.
 
 Про push и создание Firebase-проекта — см. [PUSH.md](PUSH.md).
 

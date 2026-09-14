@@ -147,41 +147,93 @@ export default function AdminUsers() {
         ) : users.length === 0 ? (
           <div className="text-ink-3-light dark:text-ink-3-dark text-[14px]">Нет ни одного администратора.</div>
         ) : (
-          <div className="border border-line-light dark:border-line-dark rounded-2xl overflow-hidden">
-            <table className="min-w-full text-[14px]">
-              <thead className="bg-panel-light dark:bg-panel-dark text-[11px] font-bold tracking-wider uppercase text-ink-3-light dark:text-ink-3-dark">
-                <tr>
-                  <th className="text-left px-4 py-2.5">Логин</th>
-                  <th className="text-left px-4 py-2.5">Имя</th>
-                  <th className="text-left px-4 py-2.5">Роль</th>
-                  <th className="text-left px-4 py-2.5">Создан</th>
-                  <th className="text-right px-4 py-2.5">Действия</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id} className="border-t border-line-light dark:border-line-dark">
-                    <td className="px-4 py-3 font-semibold">{u.login}</td>
-                    <td className="px-4 py-3 text-ink-2-light dark:text-ink-2-dark">{u.displayName || '-'}</td>
-                    <td className="px-4 py-3">
+          <>
+            {/* Мобильная версия - карточки */}
+            <div className="md:hidden space-y-3">
+              {users.map(u => (
+                <div key={u.id} className="border border-line-light dark:border-line-dark rounded-2xl p-4">
+                  <div className="flex items-start justify-between gap-3 mb-1.5">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-[15px] truncate">{u.login}</div>
+                      {u.displayName && (
+                        <div className="text-ink-2-light dark:text-ink-2-dark text-[13px] mt-0.5 truncate">
+                          {u.displayName}
+                        </div>
+                      )}
+                    </div>
+                    <span className={[
+                      'shrink-0 text-[10.5px] font-bold tracking-[.06em] uppercase px-2 py-1 rounded-full',
+                      u.role === 'tech'
+                        ? 'bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark'
+                        : 'bg-panel-light dark:bg-panel-dark text-ink-2-light dark:text-ink-2-dark',
+                    ].join(' ')}>
+                      {u.role === 'tech' ? 'Технический' : 'Школы'}
+                    </span>
+                  </div>
+
+                  <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mb-3">
+                    Создан {new Date(u.createdAt).toLocaleDateString('ru')}
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <label className="block">
+                      <div className="text-[10.5px] font-bold tracking-[.08em] uppercase text-ink-3-light dark:text-ink-3-dark mb-1">Роль</div>
                       <select value={u.role} onChange={e => changeRole(u, e.target.value as AdminRole)}
-                        className="bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-1.5 text-[13.5px]">
-                        <option value="school">Школы</option>
-                        <option value="tech">Технический</option>
+                        className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-2 text-[13.5px]">
+                        <option value="school">Администратор школы</option>
+                        <option value="tech">Технический администратор</option>
                       </select>
-                    </td>
-                    <td className="px-4 py-3 text-ink-3-light dark:text-ink-3-dark tabular-nums text-[12.5px]">
-                      {new Date(u.createdAt).toLocaleDateString('ru')}
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <button onClick={() => resetPassword(u)} className="text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-2">Сменить пароль</button>
-                      <button onClick={() => deleteUser(u)} className="text-[12.5px] font-semibold text-red-500 hover:text-red-600 dark:hover:text-red-400 px-2">Удалить</button>
-                    </td>
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <button onClick={() => resetPassword(u)} className="py-2 rounded-lg border border-line-light dark:border-line-dark text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark active:bg-panel-light dark:active:bg-panel-dark">
+                        Сменить пароль
+                      </button>
+                      <button onClick={() => deleteUser(u)} className="py-2 rounded-lg border border-red-300/60 dark:border-red-900/60 text-[12.5px] font-semibold text-red-600 dark:text-red-400 active:bg-red-50 dark:active:bg-red-950/40">
+                        Удалить
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Десктоп - таблица */}
+            <div className="hidden md:block border border-line-light dark:border-line-dark rounded-2xl overflow-x-auto">
+              <table className="min-w-full text-[14px]">
+                <thead className="bg-panel-light dark:bg-panel-dark text-[11px] font-bold tracking-wider uppercase text-ink-3-light dark:text-ink-3-dark">
+                  <tr>
+                    <th className="text-left px-4 py-2.5">Логин</th>
+                    <th className="text-left px-4 py-2.5">Имя</th>
+                    <th className="text-left px-4 py-2.5">Роль</th>
+                    <th className="text-left px-4 py-2.5">Создан</th>
+                    <th className="text-right px-4 py-2.5">Действия</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {users.map(u => (
+                    <tr key={u.id} className="border-t border-line-light dark:border-line-dark">
+                      <td className="px-4 py-3 font-semibold">{u.login}</td>
+                      <td className="px-4 py-3 text-ink-2-light dark:text-ink-2-dark">{u.displayName || '-'}</td>
+                      <td className="px-4 py-3">
+                        <select value={u.role} onChange={e => changeRole(u, e.target.value as AdminRole)}
+                          className="bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-1.5 text-[13.5px]">
+                          <option value="school">Школы</option>
+                          <option value="tech">Технический</option>
+                        </select>
+                      </td>
+                      <td className="px-4 py-3 text-ink-3-light dark:text-ink-3-dark tabular-nums text-[12.5px]">
+                        {new Date(u.createdAt).toLocaleDateString('ru')}
+                      </td>
+                      <td className="px-4 py-3 text-right whitespace-nowrap">
+                        <button onClick={() => resetPassword(u)} className="text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-2">Сменить пароль</button>
+                        <button onClick={() => deleteUser(u)} className="text-[12.5px] font-semibold text-red-500 hover:text-red-600 dark:hover:text-red-400 px-2">Удалить</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

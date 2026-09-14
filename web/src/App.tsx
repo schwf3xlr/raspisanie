@@ -10,6 +10,7 @@ import AdminSchedule from './pages/admin/AdminSchedule';
 import AdminTemplate from './pages/admin/AdminTemplate';
 import AdminDictionaries from './pages/admin/AdminDictionaries';
 import AdminUsers from './pages/admin/AdminUsers';
+import AdminApp from './pages/admin/AdminApp';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import FullGridPage from './pages/FullGridPage';
@@ -60,6 +61,7 @@ export default function App() {
           <Route path="template" element={<AdminTemplate />} />
           <Route path="dictionaries" element={<AdminDictionaries />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="app" element={<AdminApp />} />
         </Route>
         <Route path="*" element={<Landing />} />
       </Routes>

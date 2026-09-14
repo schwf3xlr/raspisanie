@@ -1,9 +1,11 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
+import multipart from '@fastify/multipart';
 import { config } from './config.js';
 import { registerRoutes } from './routes.js';
 import { registerAdminRoutes } from './routes-admin.js';
+import { registerApkRoutes } from './routes-apk.js';
 import { cleanupExpiredSessions, ensureInitialAdmin } from './auth.js';
 import { resortClassesIfNeeded, seedIfEmpty } from './seed.js';
 import { db } from './db.js';
@@ -26,8 +28,14 @@ await app.register(cookie, {
   secret: config.sessionSecret,
 });
 
+await app.register(multipart, {
+  // Один файл, до 100 МБ. Отдельные поля-строки короткие.
+  limits: { files: 1, fileSize: 100 * 1024 * 1024, fieldSize: 4 * 1024 },
+});
+
 await registerRoutes(app);
 await registerAdminRoutes(app);
+await registerApkRoutes(app);
 
 try {
   const s = await seedIfEmpty();

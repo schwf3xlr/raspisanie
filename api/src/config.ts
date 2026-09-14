@@ -18,6 +18,12 @@ export const config = {
   sessionTtlDays: 7,
 
   days: DAYS,
+
+  // Директория, в которую Caddy раздаёт APK и latest.json.
+  // На VPS обычно /var/www/downloads. В dev без переменной - функционал управления APK отключён.
+  apkDir: process.env.APK_DIR || '',
+  // Публичный URL, по которому файлы из APK_DIR доступны снаружи.
+  apkPublicBase: process.env.APK_PUBLIC_BASE || 'https://school.rskbot.ru/downloads',
 };
 
 export const DEFAULT_TIME_SLOTS: Array<{ number: number; timeStart: string; timeEnd: string }> = [
