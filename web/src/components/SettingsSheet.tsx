@@ -1,19 +1,26 @@
 import { Link } from 'react-router-dom';
 import type { ThemeMode } from '../lib/hooks';
+import type { SavedViewer } from '../lib/types';
 import { useAppVersion } from '../lib/version';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  className: string;
-  onChangeClass: () => void;
+  viewer: SavedViewer;
+  onChangeViewer: () => void;
   theme: ThemeMode;
   onChangeTheme: (m: ThemeMode) => void;
 }
 
-export default function SettingsSheet({ open, onClose, className, onChangeClass, theme, onChangeTheme }: Props) {
+export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, theme, onChangeTheme }: Props) {
   const version = useAppVersion();
   if (!open) return null;
+
+  const isTeacher = viewer.mode === 'teacher';
+  const label = isTeacher ? 'Я учитель' : 'Мой класс';
+  const value = isTeacher ? (viewer.teacherName ?? 'учитель не выбран') : (viewer.className ?? 'не выбран');
+  const switchText = isTeacher ? 'Выбрать другого' : 'Сменить класс';
+
   return (
     <div
       className="fixed inset-0 bg-black/40 flex items-end md:items-center justify-center z-20 md:p-6"
@@ -23,12 +30,12 @@ export default function SettingsSheet({ open, onClose, className, onChangeClass,
         <h3 className="font-serif font-medium text-[22px] -tracking-[.01em] mb-1">Настройки</h3>
 
         <div className="flex justify-between items-center py-4 pt-5">
-          <div>
-            <div className="text-[14.5px]">Мой класс</div>
-            <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5">{className}</div>
+          <div className="min-w-0">
+            <div className="text-[14.5px]">{label}</div>
+            <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5 truncate">{value}</div>
           </div>
-          <button onClick={onChangeClass} className="text-accent dark:text-accent-dark font-semibold">
-            Сменить
+          <button onClick={onChangeViewer} className="text-accent dark:text-accent-dark font-semibold shrink-0 ml-3">
+            {switchText}
           </button>
         </div>
 

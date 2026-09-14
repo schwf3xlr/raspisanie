@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { api } from '../lib/api';
-import { DAY_SHORT, type Day, type DayName, type Week } from '../lib/types';
+import { DAY_SHORT, type Day, type DayName, type SavedViewer, type Teacher, type Week } from '../lib/types';
 import {
   addDays,
   fmtDate,
@@ -16,18 +16,35 @@ import {
 import { useLocalStorage, useTheme, useTick } from '../lib/hooks';
 import LessonRow from '../components/LessonRow';
 import ClassPicker from '../components/ClassPicker';
+import TeacherPicker from '../components/TeacherPicker';
 import SettingsSheet from '../components/SettingsSheet';
 import SchoolLogo from '../components/SchoolLogo';
 
+// Одноразовая миграция старого сохранённого ключа `class` → новый `viewer`.
+function migrateOldClassKey(): SavedViewer | null {
+  try {
+    const old = localStorage.getItem('class');
+    if (old) {
+      const parsed = JSON.parse(old);
+      if (typeof parsed === 'string' && parsed) {
+        localStorage.removeItem('class');
+        return { mode: 'class', className: parsed };
+      }
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
 export default function ScheduleApp() {
   const navigate = useNavigate();
-  const [savedClass, setSavedClass] = useLocalStorage<string | null>('class', null);
+  const [viewer, setViewer] = useLocalStorage<SavedViewer | null>('viewer', () => migrateOldClassKey());
+  const [pickingMode, setPickingMode] = useState<'class' | 'teacher'>('class');
   const [classes, setClasses] = useState<string[] | null>(null);
+  const [teachers, setTeachers] = useState<Teacher[] | null>(null);
   const [monday, setMonday] = useState<Date>(() => mondayOf(new Date()));
   const [dateIso, setDateIso] = useState<string>(() => {
     const now = new Date();
     const dow = now.getDay();
-    // Выходные показывают ближайший понедельник
     if (dow === 0 || dow === 6) return toISODate(mondayOf(now));
     return toISODate(now);
   });
@@ -40,33 +57,34 @@ export default function ScheduleApp() {
   useTick(60_000);
 
   useEffect(() => {
-    api.classes().then(r => setClasses(r.classes)).catch(err => setError(err.message));
-  }, []);
+    if (viewer) return;
+    if (pickingMode === 'class') {
+      api.classes().then(r => setClasses(r.classes)).catch(err => setError(err.message));
+    } else {
+      api.teachers().then(r => setTeachers(r.teachers)).catch(err => setError(err.message));
+    }
+  }, [viewer, pickingMode]);
 
   useEffect(() => {
-    if (!savedClass) { setWeek(null); setLoading(false); return; }
+    if (!viewer) { setWeek(null); setLoading(false); return; }
     setLoading(true); setError(null);
-    api.week(savedClass, toISODate(monday))
-      .then(setWeek)
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [savedClass, monday]);
+    const iso = toISODate(monday);
+    const promise = viewer.mode === 'teacher' && viewer.teacherId
+      ? api.weekTeacher(viewer.teacherId, iso)
+      : viewer.className
+        ? api.week(viewer.className, iso)
+        : null;
+    if (!promise) { setLoading(false); return; }
+    promise.then(setWeek).catch(err => setError(err.message)).finally(() => setLoading(false));
+  }, [viewer, monday]);
 
   const currentDay: Day | null = useMemo(() => {
     if (!week) return null;
     return week.days.find(d => d.date === dateIso) ?? week.days[0] ?? null;
   }, [week, dateIso]);
 
-  const goPrevWeek = () => {
-    const prev = addDays(monday, -7);
-    setMonday(prev);
-    setDateIso(toISODate(prev));
-  };
-  const goNextWeek = () => {
-    const next = addDays(monday, 7);
-    setMonday(next);
-    setDateIso(toISODate(next));
-  };
+  const goPrevWeek = () => { const p = addDays(monday, -7); setMonday(p); setDateIso(toISODate(p)); };
+  const goNextWeek = () => { const n = addDays(monday, 7); setMonday(n); setDateIso(toISODate(n)); };
   const goToday = () => {
     const t = new Date();
     setMonday(mondayOf(t));
@@ -75,28 +93,51 @@ export default function ScheduleApp() {
     else setDateIso(toISODate(mondayOf(t)));
   };
 
-  if (loading && !week && classes == null) return <LoadingState />;
+  if (loading && !week && classes == null && teachers == null) return <LoadingState />;
   if (error && !week) return <ErrorState message={error} onRetry={() => location.reload()} />;
-  if (!savedClass) {
-    if (!classes) return <LoadingState />;
-    if (classes.length === 0) return <ErrorState message="В базе пока нет классов. Зайди в админ-панель и заведи их." onRetry={() => location.reload()} />;
-    return <ClassPicker classes={classes} onPick={cls => setSavedClass(cls)} />;
+
+  if (!viewer) {
+    if (pickingMode === 'class') {
+      if (!classes) return <LoadingState />;
+      if (classes.length === 0) return <ErrorState message="В базе пока нет классов. Зайди в админ-панель и заведи их." onRetry={() => location.reload()} />;
+      return (
+        <ClassPicker
+          classes={classes}
+          onPick={cls => setViewer({ mode: 'class', className: cls })}
+          onSwitchToTeacher={() => setPickingMode('teacher')}
+        />
+      );
+    }
+    if (!teachers) return <LoadingState />;
+    return (
+      <TeacherPicker
+        teachers={teachers}
+        onPick={t => setViewer({ mode: 'teacher', teacherId: t.id, teacherName: t.shortName })}
+        onSwitchToClass={() => setPickingMode('class')}
+      />
+    );
   }
+
   if (!week) return <LoadingState />;
 
   const badge = relativeBadge(fromISODate(dateIso));
   const currentDate = fromISODate(dateIso);
   const today = new Date();
+  const isTeacherMode = viewer.mode === 'teacher';
+  const headerSubtitle = isTeacherMode
+    ? (viewer.teacherName ?? week.teacherName ?? '')
+    : (viewer.className ?? '');
+  const headerLabel = isTeacherMode ? 'Учитель' : 'Класс';
 
   return (
     <div className="min-h-screen">
       <div className="max-w-2xl mx-auto px-6 pb-10 pt-2 md:pt-6">
         <header className="sticky top-0 bg-bg-light dark:bg-bg-dark z-10 flex justify-between items-center py-5 pb-2">
-          <div className="flex items-center gap-2.5 text-[14px] text-ink-2-light dark:text-ink-2-dark font-medium">
+          <div className="flex items-center gap-2.5 text-[14px] text-ink-2-light dark:text-ink-2-dark font-medium min-w-0">
             <SchoolLogo size={26} className="rounded-lg" />
-            <span>Класс <b className="text-ink-light dark:text-ink-dark font-semibold">{savedClass}</b></span>
+            <span className="truncate">{headerLabel} <b className="text-ink-light dark:text-ink-dark font-semibold">{headerSubtitle}</b></span>
           </div>
-          <div className="flex gap-1.5 items-center">
+          <div className="flex gap-1.5 items-center shrink-0">
             {!Capacitor.isNativePlatform() && (
               <IconButton title="Домой" onClick={() => navigate('/')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
@@ -122,7 +163,6 @@ export default function ScheduleApp() {
           </div>
         </div>
 
-        {/* week nav */}
         <div className="flex items-center justify-between my-5">
           <button onClick={goPrevWeek} className="w-10 h-10 rounded-xl border border-line-light dark:border-line-dark grid place-items-center text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark hover:bg-panel-light dark:hover:bg-panel-dark">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
@@ -135,7 +175,6 @@ export default function ScheduleApp() {
           </button>
         </div>
 
-        {/* day chips */}
         <div className="flex gap-1.5 -mx-6 px-6 pb-1.5 overflow-x-auto no-scrollbar mb-4">
           {week.days.map(d => {
             const on = d.date === dateIso;
@@ -171,7 +210,6 @@ export default function ScheduleApp() {
           })}
         </div>
 
-        {/* day content */}
         {!currentDay ? (
           <div className="py-16 text-center text-ink-3-light dark:text-ink-3-dark">Нет данных</div>
         ) : !currentDay.published ? (
@@ -194,16 +232,19 @@ export default function ScheduleApp() {
             <div className="pt-2 pb-5">
               {currentDay.lessons.length === 0 ? (
                 <div className="py-16 text-center text-ink-3-light dark:text-ink-3-dark">
-                  <div className="font-serif text-[22px] text-ink-2-light dark:text-ink-2-dark mb-1.5">Пусто</div>
-                  В этот день уроков нет
+                  <div className="font-serif text-[22px] text-ink-2-light dark:text-ink-2-dark mb-1.5">
+                    {isTeacherMode ? 'Уроков нет' : 'Пусто'}
+                  </div>
+                  {isTeacherMode ? 'В этот день у вас нет уроков' : 'В этот день уроков нет'}
                 </div>
               ) : (
-                currentDay.lessons.map(l => (
+                currentDay.lessons.map((l, idx) => (
                   <LessonRow
-                    key={l.number}
+                    key={`${l.number}-${l.className ?? ''}-${idx}`}
                     lesson={l}
                     isToday={currentDay.isToday}
                     distantDay={currentDay.isDistantAllDay}
+                    teacherMode={isTeacherMode}
                   />
                 ))
               )}
@@ -215,8 +256,8 @@ export default function ScheduleApp() {
       <SettingsSheet
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        className={savedClass}
-        onChangeClass={() => { setSavedClass(null); setSettingsOpen(false); }}
+        viewer={viewer}
+        onChangeViewer={() => { setViewer(null); setSettingsOpen(false); }}
         theme={themeMode}
         onChangeTheme={setThemeMode}
       />

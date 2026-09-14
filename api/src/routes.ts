@@ -57,6 +57,11 @@ export async function registerRoutes(app: FastifyInstance) {
     return { classes: rows.map(r => r.name) };
   });
 
+  app.get('/api/teachers', async () => {
+    const rows = await db.teacher.findMany({ orderBy: { shortName: 'asc' } });
+    return { teachers: rows.map(t => ({ id: t.id, fullName: t.fullName, shortName: t.shortName })) };
+  });
+
   // Ученический эндпоинт: неделя вокруг даты для класса.
   // Все дни возвращаются, но published: false скрывает содержимое.
   app.get<{ Params: { className: string }; Querystring: { date?: string } }>(
@@ -169,6 +174,125 @@ export async function registerRoutes(app: FastifyInstance) {
         days,
       };
       return resp;
+    }
+  );
+
+  // Учительский эндпоинт: неделя всех уроков конкретного учителя.
+  app.get<{ Params: { teacherId: string }; Querystring: { date?: string } }>(
+    '/api/week-teacher/:teacherId',
+    async (req, reply) => {
+      const teacherId = Number(req.params.teacherId);
+      if (!Number.isFinite(teacherId)) return reply.code(400).send({ error: 'bad teacherId' });
+
+      const teacher = await db.teacher.findUnique({ where: { id: teacherId } });
+      if (!teacher) return reply.code(404).send({ error: 'Учитель не найден' });
+
+      const dateIso = req.query?.date;
+      const anchor = dateIso ? fromISODate(dateIso) : new Date();
+      const workdays = workdaysOfWeek(anchor);
+      const weekStart = workdays[0]!;
+      const weekEnd = workdays[4]!;
+      const weekStartDb = toDbDate(toISODate(weekStart));
+      const weekEndDb = toDbDate(toISODate(weekEnd));
+
+      const uniqueDays = [...new Set(workdays.map(d => dayNameFromDate(d)!).filter(Boolean))];
+
+      // Тянем всё, что может касаться этого учителя. Фильтруем в памяти по teacherId в JSON-груп.
+      const [published, allTemplates, allOverrides, allDistant, dicts] = await Promise.all([
+        db.publishedDay.findMany({
+          where: { date: { gte: weekStartDb, lte: weekEndDb } },
+          select: { date: true },
+        }),
+        db.lessonTemplate.findMany({ where: { day: { in: uniqueDays } } }),
+        db.lessonOverride.findMany({ where: { date: { gte: weekStartDb, lte: weekEndDb } } }),
+        db.distantMark.findMany({ where: { date: { gte: weekStartDb, lte: weekEndDb } } }),
+        loadDicts(),
+      ]);
+
+      const publishedSet = new Set(published.map(p => dbDateToISO(p.date)));
+
+      const distantForClassDate = (cls: string, iso: string, n: number) => {
+        // приоритет: конкретный урок, потом весь день
+        for (const d of allDistant) {
+          if (d.className !== cls) continue;
+          if (dbDateToISO(d.date) !== iso) continue;
+          if (d.lessonNumber === n) return { note: d.note };
+        }
+        for (const d of allDistant) {
+          if (d.className !== cls) continue;
+          if (dbDateToISO(d.date) !== iso) continue;
+          if (d.lessonNumber == null) return { note: d.note, wholeDay: true };
+        }
+        return null;
+      };
+
+      const days: DayDTO[] = workdays.map(d => {
+        const iso = toISODate(d);
+        const dayName = dayNameFromDate(d);
+        const isPublished = publishedSet.has(iso);
+
+        const dayLessons: LessonDTO[] = [];
+        if (isPublished && dayName) {
+          // Для каждого класса собираем эффективный источник (override → template).
+          const perClassKeys = new Map<string, Set<number>>(); // className → numbers
+          for (const t of allTemplates) if (t.day === dayName) {
+            (perClassKeys.get(t.className) ?? perClassKeys.set(t.className, new Set()).get(t.className)!).add(t.number);
+          }
+          for (const o of allOverrides) if (dbDateToISO(o.date) === iso) {
+            (perClassKeys.get(o.className) ?? perClassKeys.set(o.className, new Set()).get(o.className)!).add(o.number);
+          }
+
+          for (const [cls, numbers] of perClassKeys) {
+            for (const n of numbers) {
+              const override = allOverrides.find(o =>
+                dbDateToISO(o.date) === iso && o.className === cls && o.number === n
+              );
+              const template = allTemplates.find(t =>
+                t.day === dayName && t.className === cls && t.number === n
+              );
+              const source = override ?? template;
+              if (!source) continue;
+              if (override?.isCancelled) continue;
+              const groupsRaw = parseGroups(source.groups);
+              // Оставляем только те группы, где учитель — наш.
+              const myGroups = groupsRaw.filter(g => g.teacherId === teacherId);
+              if (myGroups.length === 0) continue;
+              const resolved = resolveGroups(myGroups, dicts);
+              const dist = distantForClassDate(cls, iso, n);
+              dayLessons.push({
+                number: n,
+                timeStart: source.timeStart,
+                timeEnd: source.timeEnd,
+                groups: resolved,
+                fromOverride: !!override,
+                isCancelled: false,
+                distant: dist ? { lessonLevel: true, note: dist.note ?? null } : null,
+                // расширение: показываем ученикам класс, где идёт урок
+                className: cls,
+              });
+            }
+          }
+          dayLessons.sort((a, b) => a.number - b.number || (a.className ?? '').localeCompare(b.className ?? ''));
+        }
+
+        return {
+          date: iso,
+          day: dayName,
+          published: isPublished,
+          isToday: iso === toISODate(new Date()),
+          isDistantAllDay: false,          // для учителя понятие «весь день дистант» неактуально
+          distantAllDayNote: null,
+          lessons: dayLessons,
+        };
+      });
+
+      return {
+        teacherId,
+        teacherName: teacher.shortName,
+        weekStart: toISODate(weekStart),
+        weekEnd: toISODate(weekEnd),
+        days,
+      };
     }
   );
 }

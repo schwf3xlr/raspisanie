@@ -5,9 +5,11 @@ interface Props {
   lesson: Lesson;
   isToday: boolean;
   distantDay?: boolean;
+  /** В учительском виде — не рисуем имя учителя (это же он сам), но показываем класс. */
+  teacherMode?: boolean;
 }
 
-export default function LessonRow({ lesson, isToday, distantDay = false }: Props) {
+export default function LessonRow({ lesson, isToday, distantDay = false, teacherMode = false }: Props) {
   const st = lessonStatus(lesson.timeStart, lesson.timeEnd, isToday);
   const dim = st.status === 'done';
   const now = st.status === 'now';
@@ -62,6 +64,12 @@ export default function LessonRow({ lesson, isToday, distantDay = false }: Props
               )}
             </div>
             <div className={['text-[13.5px] mt-1.5 flex gap-2.5 items-center flex-wrap', dim ? 'text-ink-3-light dark:text-ink-3-dark' : 'text-ink-2-light dark:text-ink-2-dark'].join(' ')}>
+              {teacherMode && lesson.className && i === 0 && (
+                <span className={['rounded-md px-1.5 py-px text-[12px] font-bold tabular-nums',
+                  dim ? 'bg-line-2-light dark:bg-line-2-dark text-ink-3-light dark:text-ink-3-dark' : 'bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark'].join(' ')}>
+                  {lesson.className}
+                </span>
+              )}
               {distant ? (
                 <span className="text-distant dark:text-distant-dark font-semibold">Онлайн</span>
               ) : (
@@ -71,7 +79,7 @@ export default function LessonRow({ lesson, isToday, distantDay = false }: Props
                   </span>
                 )
               )}
-              {g.teacher && <span>{g.teacher}</span>}
+              {!teacherMode && g.teacher && <span>{g.teacher}</span>}
             </div>
           </div>
         ))}

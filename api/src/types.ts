@@ -21,6 +21,8 @@ export interface LessonDTO {
   fromOverride: boolean;
   isCancelled: boolean;
   distant: { lessonLevel: boolean; note: string | null } | null;
+  // Только для учительского вида — в каком классе учитель ведёт этот урок.
+  className?: string;
 }
 
 export interface DayDTO {
@@ -34,7 +36,9 @@ export interface DayDTO {
 }
 
 export interface WeekResponse {
-  className: string;
+  className?: string;
+  teacherId?: number;
+  teacherName?: string;
   weekStart: string;
   weekEnd: string;
   days: DayDTO[];

@@ -1,6 +1,7 @@
 interface Props {
   classes: string[];
   onPick: (className: string) => void;
+  onSwitchToTeacher?: () => void;
 }
 
 function parallelOf(cls: string): '5-6' | '7-8' | '9' | '10-11' | 'other' {
@@ -20,22 +21,30 @@ const GROUP_LABELS: Record<string, string> = {
   'other': 'Другие',
 };
 
-export default function ClassPicker({ classes, onPick }: Props) {
+export default function ClassPicker({ classes, onPick, onSwitchToTeacher }: Props) {
   const groups: Record<string, string[]> = { '5-6': [], '7-8': [], '9': [], '10-11': [], 'other': [] };
   for (const c of classes) groups[parallelOf(c)].push(c);
 
   return (
     <div className="max-w-2xl mx-auto px-6 pb-10">
-      <div className="pt-12 md:pt-20 pb-8 md:pb-10">
+      <div className="pt-12 md:pt-20 pb-6 md:pb-8">
         <div className="w-14 h-14 rounded-2xl bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark grid place-items-center font-serif font-medium text-[26px] mb-6">
           Ш
         </div>
         <h1 className="font-serif text-[40px] -tracking-[.02em] leading-[1.05] mb-3">
           Выбери <em className="italic text-accent dark:text-accent-dark">свой</em> класс
         </h1>
-        <p className="text-ink-2-light dark:text-ink-2-dark text-[15px] leading-relaxed">
+        <p className="text-ink-2-light dark:text-ink-2-dark text-[15px] leading-relaxed mb-4">
           Мы запомним его — при следующем открытии сразу покажем твоё расписание.
         </p>
+        {onSwitchToTeacher && (
+          <button
+            onClick={onSwitchToTeacher}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark"
+          >
+            Я учитель →
+          </button>
+        )}
       </div>
 
       {Object.entries(groups).map(([key, items]) =>
