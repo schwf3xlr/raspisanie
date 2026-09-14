@@ -107,7 +107,7 @@ export default function AdminLayout() {
           <SchoolLogo size={36} />
           <div className="leading-[1.15]">
             <div className="font-semibold text-[14px]">СОШ №44</div>
-            <div className="text-ink-3-light dark:text-ink-3-dark text-[11.5px]">Админ-панель</div>
+            <div className="text-ink-3-light dark:text-ink-3-dark text-[11.5px]">Панель управления</div>
           </div>
         </Link>
         {nav}

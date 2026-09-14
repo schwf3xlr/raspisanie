@@ -5,7 +5,7 @@ interface Props {
   lesson: Lesson;
   isToday: boolean;
   distantDay?: boolean;
-  /** В учительском виде — не рисуем имя учителя (это же он сам), но показываем класс. */
+  /** В учительском виде - не рисуем имя учителя (это же он сам), но показываем класс. */
   teacherMode?: boolean;
 }
 

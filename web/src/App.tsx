@@ -9,7 +9,10 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminSchedule from './pages/admin/AdminSchedule';
 import AdminTemplate from './pages/admin/AdminTemplate';
 import AdminDictionaries from './pages/admin/AdminDictionaries';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 import DialogRoot from './components/DialogRoot';
+import CookieBanner from './components/CookieBanner';
 import { useTheme } from './lib/hooks';
 import { checkForUpdate } from './lib/update-check';
 import { initPush, isPushSupported } from './lib/push';
@@ -21,7 +24,7 @@ export default function App() {
 
   useEffect(() => {
     document.title = 'Расписание · СОШ №44';
-    // Проверка обновлений — только в Android-приложении, в браузере no-op.
+    // Проверка обновлений - только в Android-приложении, в браузере no-op.
     // Небольшая задержка, чтобы UI успел появиться первым.
     const t = setTimeout(() => { void checkForUpdate(); }, 1500);
 
@@ -30,7 +33,7 @@ export default function App() {
       void initPush({
         viewer,
         onNotificationTap: () => {
-          // По клику на уведомление — открываем расписание.
+          // По клику на уведомление - открываем расписание.
           navigate('/app');
         },
       });
@@ -42,9 +45,11 @@ export default function App() {
   return (
     <>
       <Routes>
-        {/* В Android-приложении лендинг не показываем — сразу ведём на расписание. */}
+        {/* В Android-приложении лендинг не показываем - сразу ведём на расписание. */}
         <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/app" replace /> : <Landing />} />
         <Route path="/app" element={<ScheduleApp />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboard />} />
@@ -55,6 +60,7 @@ export default function App() {
         <Route path="*" element={<Landing />} />
       </Routes>
       <DialogRoot />
+      <CookieBanner />
     </>
   );
 }

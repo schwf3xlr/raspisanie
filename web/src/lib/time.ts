@@ -74,7 +74,7 @@ export function lessonStatus(timeStart: string, timeEnd: string, isToday: boolea
   if (start == null || end == null) return { status: 'upcoming' };
   const now = nowMinutes();
   if (now < start) return { status: 'upcoming' };
-  if (now <= end) {
+  if (now < end) {
     const total = end - start || 1;
     return { status: 'now', progress: (now - start) / total, minutesLeft: end - now };
   }

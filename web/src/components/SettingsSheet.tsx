@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import type { ThemeMode } from '../lib/hooks';
 import type { SavedViewer } from '../lib/types';
 import { useAppVersion } from '../lib/version';
+import { checkForUpdate } from '../lib/update-check';
 
 interface Props {
   open: boolean;
@@ -14,12 +17,37 @@ interface Props {
 
 export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, theme, onChangeTheme }: Props) {
   const version = useAppVersion();
+  const isNative = Capacitor.isNativePlatform();
+  const [checking, setChecking] = useState(false);
+  const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+
   if (!open) return null;
 
   const isTeacher = viewer.mode === 'teacher';
   const label = isTeacher ? 'Я учитель' : 'Мой класс';
   const value = isTeacher ? (viewer.teacherName ?? 'учитель не выбран') : (viewer.className ?? 'не выбран');
   const switchText = isTeacher ? 'Выбрать другого' : 'Сменить класс';
+
+  const onCheckUpdate = async () => {
+    setChecking(true);
+    setUpdateMsg(null);
+    try {
+      const r = await checkForUpdate({ silent: false });
+      if (r.status === 'up-to-date') {
+        setUpdateMsg('У Вас установлена последняя версия.');
+      } else if (r.status === 'error') {
+        setUpdateMsg('Не удалось проверить обновления. Попробуйте позже.');
+      }
+      // 'offered' - диалог показан, ничего дополнительно писать не нужно.
+    } catch {
+      setUpdateMsg('Не удалось проверить обновления.');
+    } finally {
+      setChecking(false);
+      if (updateMsg == null) {
+        setTimeout(() => setUpdateMsg(null), 4000);
+      }
+    }
+  };
 
   return (
     <div
@@ -62,13 +90,43 @@ export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, t
           </div>
         </div>
 
+        {isNative && (
+          <div className="flex justify-between items-center py-4 border-t border-line-light dark:border-line-dark">
+            <div className="min-w-0">
+              <div className="text-[14.5px]">Обновление приложения</div>
+              <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5 truncate">
+                {updateMsg ?? 'Проверить наличие новой версии'}
+              </div>
+            </div>
+            <button
+              onClick={onCheckUpdate}
+              disabled={checking}
+              className="text-accent dark:text-accent-dark font-semibold shrink-0 ml-3 disabled:opacity-50"
+            >
+              {checking ? 'Проверяю…' : 'Проверить'}
+            </button>
+          </div>
+        )}
+
+        <div className="pt-4 border-t border-line-light dark:border-line-dark mt-0 flex flex-col gap-2 text-[12.5px] text-ink-3-light dark:text-ink-3-dark">
+          <Link to="/privacy" onClick={onClose} className="hover:text-ink-light dark:hover:text-ink-dark">
+            Политика конфиденциальности
+          </Link>
+          <Link to="/terms" onClick={onClose} className="hover:text-ink-light dark:hover:text-ink-dark">
+            Пользовательское соглашение
+          </Link>
+          <a href="mailto:schwf3xlr@mail.ru" className="hover:text-ink-light dark:hover:text-ink-dark">
+            schwf3xlr@mail.ru
+          </a>
+        </div>
+
         <Link
           to="/admin/login"
           onClick={onClose}
           className="mt-4 w-full flex items-center justify-center gap-2 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark py-3 rounded-2xl font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-          Админ-панель
+          Панель управления
         </Link>
 
         <button

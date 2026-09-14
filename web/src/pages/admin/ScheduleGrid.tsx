@@ -51,7 +51,7 @@ export default function ScheduleGrid({
 
   const totalLeft = NUM_W + TIME_W;
 
-  // Когда пользователь выбирает ячейку и справа открывается drawer, сетка сужается —
+  // Когда пользователь выбирает ячейку и справа открывается drawer, сетка сужается -
   // и выбранная ячейка (особенно правая, вроде 11А) может уехать за пределы видимости.
   // Двойной requestAnimationFrame даёт браузеру сделать reflow, потом уже скроллим.
   useEffect(() => {
@@ -152,7 +152,7 @@ export default function ScheduleGrid({
                             <div>{t.timeStart}</div>
                             <div className="text-ink-3-light dark:text-ink-3-dark mt-0.5">{t.timeEnd}</div>
                           </>
-                        ) : <span className="italic text-ink-3-light dark:text-ink-3-dark">—</span>}
+                        ) : <span className="italic text-ink-3-light dark:text-ink-3-dark">-</span>}
                       </div>
                     </div>
                   </div>

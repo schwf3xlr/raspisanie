@@ -144,6 +144,32 @@ function pickForClassDay(cls: string, day: string): Combo[] {
   return picked;
 }
 
+// Повторение той же логики, что в routes-admin.guessSortKey.
+// Дублирование сознательное — чтобы seed мог работать без импорта роутов.
+function guessSortKey(name: string): number {
+  const m = name.match(/^(\d{1,2})\s*([А-Яа-яA-Za-z]?)/);
+  if (!m) return 9999;
+  const parallel = parseInt(m[1]!, 10);
+  const letter = (m[2] ?? '').toUpperCase();
+  const letterOrder = letter ? letter.charCodeAt(0) - 'А'.charCodeAt(0) + 1 : 0;
+  return parallel * 100 + Math.max(0, Math.min(99, letterOrder));
+}
+
+// Проходит по всем классам и приводит sortKey к автологике «5А=501, 9А=901, 10А=1001».
+// Идемпотентно — если всё уже верно, ничего не делает.
+export async function resortClassesIfNeeded(): Promise<{ updated: number; total: number }> {
+  const all = await db.class.findMany();
+  let updated = 0;
+  for (const c of all) {
+    const key = guessSortKey(c.name);
+    if (c.sortKey !== key) {
+      await db.class.update({ where: { id: c.id }, data: { sortKey: key } });
+      updated++;
+    }
+  }
+  return { updated, total: all.length };
+}
+
 export async function seedIfEmpty(): Promise<{ seeded: boolean; classes: number; lessons: number }> {
   const [existingClasses, existingLessons] = await Promise.all([
     db.class.count(),

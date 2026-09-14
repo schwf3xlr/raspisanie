@@ -3,7 +3,6 @@ import { App } from '@capacitor/app';
 import { confirmDialog } from './dialog';
 
 const MANIFEST_URL = (import.meta.env.VITE_API_BASE ?? '') + '/downloads/latest.json';
-const DISMISS_KEY = 'update-dismissed-version';
 
 interface Manifest {
   versionCode: number;
@@ -13,32 +12,44 @@ interface Manifest {
   changelog?: string;
 }
 
-// Запускается один раз при старте приложения. Работает только в Capacitor (Android APK),
-// в браузере ничего не делает.
-export async function checkForUpdate(): Promise<void> {
-  if (!Capacitor.isNativePlatform()) return;
+export interface UpdateCheckResult {
+  status: 'not-native' | 'up-to-date' | 'error' | 'offered';
+  current?: string;
+  latest?: Manifest;
+  error?: string;
+}
 
-  // eslint-disable-next-line no-console
+// Запускается при каждом старте приложения и при ручном нажатии «Проверить обновление» из настроек.
+// Работает только в Capacitor (Android APK); в браузере возвращает 'not-native'.
+//
+// Опция `silent`:
+//   true  - авто-запуск: молча уходит, если обновления нет или манифест недоступен.
+//   false - ручной запуск: покажет toast/alert о том, что установлена последняя версия.
+export async function checkForUpdate(opts: { silent?: boolean } = {}): Promise<UpdateCheckResult> {
+  const silent = opts.silent ?? true;
+  if (!Capacitor.isNativePlatform()) return { status: 'not-native' };
+
   const log = (...args: unknown[]) => console.log('[update-check]', ...args);
 
   try {
     const info = await App.getInfo();
     const currentCode = Number(info.build) || 0;
-    log('current version:', info.version, 'build:', info.build, `→ manifest URL: ${MANIFEST_URL}`);
+    log('current version:', info.version, 'build:', info.build, `-> manifest URL: ${MANIFEST_URL}`);
 
     const res = await fetch(MANIFEST_URL, { cache: 'no-cache' });
-    if (!res.ok) { log('manifest fetch failed:', res.status, res.statusText); return; }
+    if (!res.ok) {
+      log('manifest fetch failed:', res.status, res.statusText);
+      return { status: 'error', error: `${res.status} ${res.statusText}` };
+    }
     const m = (await res.json()) as Manifest;
     log('manifest:', m);
 
-    if (!m?.versionCode || !m.apkUrl) { log('manifest missing versionCode or apkUrl'); return; }
-    if (m.versionCode <= currentCode) { log('already up-to-date'); return; }
-
-    // Если пользователь уже отклонил именно эту версию — не спрашиваем снова,
-    // пока не выйдет ещё более новая.
-    if (!m.mandatory) {
-      const dismissed = Number(localStorage.getItem(DISMISS_KEY) ?? 0);
-      if (m.versionCode <= dismissed) { log('previously dismissed:', dismissed); return; }
+    if (!m?.versionCode || !m.apkUrl) {
+      return { status: 'error', error: 'manifest missing versionCode or apkUrl' };
+    }
+    if (m.versionCode <= currentCode) {
+      log('already up-to-date');
+      return { status: 'up-to-date', current: info.version, latest: m };
     }
 
     const changelog = m.changelog?.trim() || 'Появилась новая версия приложения.';
@@ -56,12 +67,12 @@ export async function checkForUpdate(): Promise<void> {
       // Открываем ссылку на APK во внешнем браузере / в системном download-менеджере.
       // Android скачает файл, потом пользователь нажмёт «Установить».
       window.open(m.apkUrl, '_blank');
-    } else if (!m.mandatory) {
-      localStorage.setItem(DISMISS_KEY, String(m.versionCode));
     }
+    // «Позже» больше НЕ запоминается: при следующем входе спросим снова.
+    return { status: 'offered', current: info.version, latest: m };
   } catch (err) {
-    // Тихо — обновление не должно ломать запуск приложения.
-    // eslint-disable-next-line no-console
+    if (!silent) throw err;
     console.warn('[update-check] failed', err);
+    return { status: 'error', error: err instanceof Error ? err.message : String(err) };
   }
 }

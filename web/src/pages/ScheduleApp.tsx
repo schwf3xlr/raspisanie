@@ -13,7 +13,7 @@ import {
   relativeBadge,
   toISODate,
 } from '../lib/time';
-import { useLocalStorage, useTheme, useTick } from '../lib/hooks';
+import { useLocalStorage, useMinuteTick, useTheme } from '../lib/hooks';
 import { syncViewer } from '../lib/push';
 import LessonRow from '../components/LessonRow';
 import ClassPicker from '../components/ClassPicker';
@@ -55,7 +55,7 @@ export default function ScheduleApp() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [themeMode, setThemeMode] = useTheme();
 
-  useTick(60_000);
+  useMinuteTick();
 
   useEffect(() => {
     void syncViewer(viewer);
@@ -104,7 +104,7 @@ export default function ScheduleApp() {
   if (!viewer) {
     if (pickingMode === 'class') {
       if (!classes) return <LoadingState />;
-      if (classes.length === 0) return <ErrorState message="В базе пока нет классов. Зайди в админ-панель и заведи их." onRetry={() => location.reload()} />;
+      if (classes.length === 0) return <ErrorState message="В базе пока нет классов. Зайдите в панель управления и заведите их." onRetry={() => location.reload()} />;
       return (
         <ClassPicker
           classes={classes}
@@ -156,7 +156,7 @@ export default function ScheduleApp() {
 
         <div className="py-5 border-b border-line-light dark:border-line-dark">
           <h1 className="font-serif text-[44px] sm:text-[56px] md:text-[76px] -tracking-[.03em] leading-[.95] break-words">
-            {currentDay?.day ?? '—'}
+            {currentDay?.day ?? '-'}
           </h1>
           <div className="flex items-center gap-2.5 mt-3 text-[15px] text-ink-2-light dark:text-ink-2-dark tabular-nums">
             <span>{fmtDate(currentDate)}</span>
@@ -199,7 +199,7 @@ export default function ScheduleApp() {
                 ].join(' ')}
               >
                 <div className={['text-[10.5px] font-semibold tracking-[.06em] uppercase', on ? 'opacity-70' : 'opacity-60'].join(' ')}>
-                  {d.day ? DAY_SHORT[d.day as DayName] ?? d.day : '—'}
+                  {d.day ? DAY_SHORT[d.day as DayName] ?? d.day : '-'}
                 </div>
                 <div className="font-serif text-[22px] font-medium leading-none tabular-nums mt-0.5">
                   {date.getDate()}
@@ -240,7 +240,7 @@ export default function ScheduleApp() {
                   <div className="font-serif text-[22px] text-ink-2-light dark:text-ink-2-dark mb-1.5">
                     {isTeacherMode ? 'Уроков нет' : 'Пусто'}
                   </div>
-                  {isTeacherMode ? 'В этот день у вас нет уроков' : 'В этот день уроков нет'}
+                  {isTeacherMode ? 'В этот день у Вас нет уроков' : 'В этот день уроков нет'}
                 </div>
               ) : (
                 currentDay.lessons.map((l, idx) => (
@@ -278,7 +278,7 @@ function NotPublished() {
       </div>
       <h2 className="font-serif text-[24px] -tracking-[.01em] mb-2">Расписание ещё не готово</h2>
       <p className="text-ink-2-light dark:text-ink-2-dark text-[14px] leading-relaxed max-w-xs mx-auto">
-        Обновится, когда завуч опубликует его. Загляни попозже.
+        Обновится, когда завуч опубликует его. Загляните позже.
       </p>
     </div>
   );

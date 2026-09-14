@@ -36,7 +36,7 @@ export default function AdminLogin() {
         </Link>
 
         <h1 className="font-serif text-[34px] md:text-[40px] -tracking-[.02em] leading-[1.05] mb-2 font-normal">
-          Админ-панель
+          Панель управления
         </h1>
         <p className="text-ink-2-light dark:text-ink-2-dark text-[14.5px] mb-8">
           Вход только для сотрудников школы.

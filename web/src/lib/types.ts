@@ -15,7 +15,7 @@ export interface Lesson {
   fromOverride: boolean;
   isCancelled: boolean;
   distant: { lessonLevel: boolean; note: string | null } | null;
-  // В учительском виде — класс, где идёт этот урок.
+  // В учительском виде - класс, где идёт этот урок.
   className?: string;
 }
 

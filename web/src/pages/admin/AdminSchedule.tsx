@@ -217,7 +217,7 @@ export default function AdminSchedule() {
           <div>
             <h1 className="font-serif text-[36px] -tracking-[.02em] leading-none font-normal">Расписание</h1>
             <p className="text-ink-2-light dark:text-ink-2-dark text-[13.5px] mt-1.5">
-              {data.day}, {fmtDate(fromISODate(dateIso))} — правки только на эту дату.
+              {data.day}, {fmtDate(fromISODate(dateIso))} - правки только на эту дату.
             </p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
@@ -521,7 +521,7 @@ function MultiSelectBar({ count, hasClipboard, onCopy, onPaste, onClear }: {
         </button>
       )}
       <button onClick={onClear} className="ml-auto text-[13px] font-medium text-ink-2-light dark:text-ink-2-dark">Отмена</button>
-      <div className="text-[11px] text-ink-3-light dark:text-ink-3-dark hidden md:block">Shift-клик — прямоугольник · Ctrl+A — всё</div>
+      <div className="text-[11px] text-ink-3-light dark:text-ink-3-dark hidden md:block">Shift-клик - прямоугольник · Ctrl+A - всё</div>
     </div>
   );
 }
@@ -575,7 +575,7 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
   const resetToTemplate = async () => {
     const ok = await confirmDialog({
       title: 'Вернуть к стандарту?',
-      message: 'Замена на эту дату будет удалена — снова будет показан урок из стандартного расписания.',
+      message: 'Замена на эту дату будет удалена - снова будет показан урок из стандартного расписания.',
       confirmText: 'Вернуть',
     });
     if (!ok) return;
@@ -597,7 +597,7 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
       <div className="p-6 border-b border-line-light dark:border-line-dark">
         <div className="text-[11px] font-bold tracking-[.1em] uppercase text-ink-3-light dark:text-ink-3-dark mb-1.5">Класс {className} · {fmtDate(fromISODate(date))}</div>
         <h2 className="font-serif text-[26px] -tracking-[.01em] font-normal leading-tight">{number}-й урок</h2>
-        <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} — {time.timeEnd}</div>
+        <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} - {time.timeEnd}</div>
         {isOverride && <div className="mt-2 inline-flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark text-[10.5px] font-bold tracking-[.06em] uppercase px-2 py-1 rounded-full">Замена</div>}
         {hasClipboard && (
           <button onClick={onPaste} className="mt-3 w-full py-2 rounded-lg bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark">
@@ -771,7 +771,7 @@ function BellsModal({ day, initial, onClose }: {
               <div className="w-6 sm:w-7 shrink-0 font-serif text-[16px] sm:text-[18px] font-medium text-ink-2-light dark:text-ink-2-dark tabular-nums text-center">{r.number}</div>
               <input type="text" value={r.timeStart} onChange={e => setRows(rs => rs.map((x, idx) => idx === i ? { ...x, timeStart: e.target.value } : x))}
                 placeholder="8:10" inputMode="numeric" className="flex-1 min-w-0 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark" />
-              <div className="text-ink-3-light dark:text-ink-3-dark shrink-0 text-[13px]">—</div>
+              <div className="text-ink-3-light dark:text-ink-3-dark shrink-0 text-[13px]">-</div>
               <input type="text" value={r.timeEnd} onChange={e => setRows(rs => rs.map((x, idx) => idx === i ? { ...x, timeEnd: e.target.value } : x))}
                 placeholder="8:50" inputMode="numeric" className="flex-1 min-w-0 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark" />
             </div>

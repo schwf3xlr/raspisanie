@@ -90,7 +90,7 @@ export default function PublishSheet({ open, onClose, target, classes, onDone }:
                 ? reachEstimate != null
                   ? `Получат ~${reachEstimate} устройств${plural(reachEstimate)} из ${totalDevices}`
                   : 'Подгружаю статистику…'
-                : 'FCM не сконфигурирован — см. PUSH.md'}
+                : 'FCM не сконфигурирован - см. PUSH.md'}
             </div>
           </div>
         </label>
@@ -108,14 +108,14 @@ export default function PublishSheet({ open, onClose, target, classes, onDone }:
                 <div className="flex-1">
                   <div className="text-[13.5px]">Всем зарегистрированным</div>
                   <div className="text-ink-3-light dark:text-ink-3-dark text-[12px] mt-0.5">
-                    Иначе — только классам: {classes.slice(0, 6).join(', ')}{classes.length > 6 ? ` +${classes.length - 6}` : ''}
+                    Иначе - только классам: {classes.slice(0, 6).join(', ')}{classes.length > 6 ? ` +${classes.length - 6}` : ''}
                   </div>
                 </div>
               </label>
             )}
 
             <div className="mt-4">
-              <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark mb-1.5">Текст (по умолчанию — стандартный)</div>
+              <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark mb-1.5">Текст (по умолчанию - стандартный)</div>
               <input
                 type="text"
                 value={notifyText}

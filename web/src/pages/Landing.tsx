@@ -120,7 +120,7 @@ export default function Landing() {
               Только расписание.
             </h2>
             <p className="text-[14.5px] md:text-[17px] text-ink-2-light dark:text-ink-2-dark leading-[1.6]">
-              Мы сознательно не сделали «супер-приложение». Открыл, увидел уроки, закрыл. Без ленты новостей, без рекламы, без назойливой регистрации.
+              Мы сознательно не сделали «супер-приложение». Открыли, увидели уроки, закрыли. Без ленты новостей, без рекламы, без назойливой регистрации.
             </p>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -147,7 +147,7 @@ export default function Landing() {
               На любом телефоне.
             </h2>
             <p className="text-[14.5px] md:text-[17px] text-ink-2-light dark:text-ink-2-dark leading-[1.6]">
-              Никакого App Store и Google Play — установка за 15 секунд прямо с этой страницы.
+              Никакого App Store и Google Play - установка за 15 секунд прямо с этой страницы.
             </p>
           </div>
 
@@ -166,7 +166,7 @@ export default function Landing() {
                 </div>
               </div>
               <p className="text-ink-2-light dark:text-ink-2-dark text-[14.5px] leading-[1.55]">
-                Скачай файл, открой в файловом менеджере. Первый раз Android спросит «разрешить установку из этого источника» — соглашайся.
+                Скачайте файл, откройте в файловом менеджере. Первый раз Android спросит «разрешить установку из этого источника» - согласитесь.
               </p>
               <div className="flex gap-2 flex-wrap mt-auto">
                 {apk ? (
@@ -183,7 +183,7 @@ export default function Landing() {
                     disabled
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 3v14m-6-6l6 6 6-6M4 21h16"/></svg>
-                    Скоро — APK
+                    Скоро - APK
                   </button>
                 )}
                 <Link to="/app" className="inline-flex items-center gap-2 px-4 py-3 rounded-full bg-transparent border border-line-light dark:border-line-dark font-semibold text-[14px]">
@@ -191,7 +191,7 @@ export default function Landing() {
                 </Link>
               </div>
               <div className="text-[12px] text-ink-3-light dark:text-ink-3-dark">
-                Пока APK не собран — работает как веб-приложение через «Добавить на главный экран».
+                Пока APK не собран - работает как веб-приложение через «Добавить на главный экран».
               </div>
             </div>
 
@@ -209,9 +209,9 @@ export default function Landing() {
                 </div>
               </div>
               <ol className="text-ink-2-light dark:text-ink-2-dark text-[14.5px] leading-[1.55] space-y-2 pl-5 list-decimal">
-                <li>Открой сайт в <b className="text-ink-light dark:text-ink-dark">Safari</b> (не в Chrome)</li>
-                <li>Нажми «Поделиться» внизу</li>
-                <li>Выбери «На экран Домой»</li>
+                <li>Откройте сайт в <b className="text-ink-light dark:text-ink-dark">Safari</b> (не в Chrome)</li>
+                <li>Нажмите «Поделиться» внизу</li>
+                <li>Выберите «На экран Домой»</li>
                 <li>Иконка появится рядом с остальными</li>
               </ol>
               <div className="flex gap-2 flex-wrap mt-auto">
@@ -220,7 +220,7 @@ export default function Landing() {
                 </Link>
               </div>
               <div className="text-[12px] text-ink-3-light dark:text-ink-3-dark">
-                Apple не разрешает ставить приложения вне App Store — это официальный способ.
+                Apple не разрешает ставить приложения вне App Store - это официальный способ.
               </div>
             </div>
           </div>
@@ -237,16 +237,24 @@ export default function Landing() {
             <p className="text-ink-2-light dark:text-ink-2-dark text-[13.5px] leading-[1.55] max-w-md">
               {fullName}
             </p>
+            <a
+              href="mailto:schwf3xlr@mail.ru"
+              className="inline-block mt-3 text-ink-2-light dark:text-ink-2-dark text-[13.5px] hover:text-ink-light dark:hover:text-ink-dark"
+            >
+              schwf3xlr@mail.ru
+            </a>
           </div>
           <div className="flex flex-wrap gap-x-6 gap-y-2 md:justify-end text-[13.5px] text-ink-2-light dark:text-ink-2-dark">
             <Link to="/app" className="hover:text-ink-light dark:hover:text-ink-dark">Открыть</Link>
             <a href="#features" className="hover:text-ink-light dark:hover:text-ink-dark">Возможности</a>
             <a href="#download" className="hover:text-ink-light dark:hover:text-ink-dark">Скачать</a>
-            <Link to="/admin" className="hover:text-ink-light dark:hover:text-ink-dark">Админ-панель</Link>
+            <Link to="/privacy" className="hover:text-ink-light dark:hover:text-ink-dark">Политика конфиденциальности</Link>
+            <Link to="/terms" className="hover:text-ink-light dark:hover:text-ink-dark">Пользовательское соглашение</Link>
+            <Link to="/admin" className="hover:text-ink-light dark:hover:text-ink-dark">Панель управления</Link>
           </div>
         </div>
         <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-line-light dark:border-line-dark text-[12.5px] text-ink-3-light dark:text-ink-3-dark flex justify-between items-center flex-wrap gap-2">
-          <span>© {new Date().getFullYear()} · Прототип</span>
+          <span>© 2026 «Расписание СОШ №44»</span>
           <span>Расписание работает офлайн</span>
         </div>
       </footer>
@@ -261,7 +269,7 @@ function SchoolMark({ small = false }: { small?: boolean }) {
 const FEATURES = [
   {
     title: 'День и неделя',
-    desc: 'Крупно — какой сейчас день, какая дата. Переключение между днями свайпом или тапом.',
+    desc: 'Крупно - какой сейчас день, какая дата. Переключение между днями свайпом или тапом.',
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>,
   },
   {
@@ -271,22 +279,22 @@ const FEATURES = [
   },
   {
     title: 'Дистант',
-    desc: 'Если урок или весь день переведён на дистанционку — сразу видно синей меткой.',
+    desc: 'Если урок или весь день переведён на дистанционку - сразу видно синей меткой.',
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>,
   },
   {
     title: 'Тёмная тема',
-    desc: 'Автоматически переключается по настройкам системы. Или руками — как удобно.',
+    desc: 'Автоматически переключается по настройкам системы. Или руками - как удобно.',
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>,
   },
   {
     title: 'Группы',
-    desc: 'Понимает деление на подгруппы — технология Д и М, английский, физкультура.',
+    desc: 'Понимает деление на подгруппы - технология Д и М, английский, физкультура.',
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><circle cx="9" cy="10" r="4"/><path d="M17 11a3 3 0 100-6M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M17 14c2.8 0 5 2.2 5 5"/></svg>,
   },
   {
     title: 'Офлайн',
-    desc: 'Последнее расписание сохраняется. В школе плохо ловит — всё равно работает.',
+    desc: 'Последнее расписание сохраняется. В школе плохо ловит - всё равно работает.',
     icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M5 12.5a7 7 0 0114 0M2 9a10 10 0 0120 0M8.5 16a3.5 3.5 0 017 0M12 19.5v.01"/></svg>,
   },
 ];

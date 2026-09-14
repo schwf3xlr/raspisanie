@@ -104,7 +104,7 @@ export default function AdminTemplate() {
       <div className="hidden md:flex md:flex-col md:flex-1 md:min-h-screen">
       <div className="bg-yellow-100 dark:bg-yellow-950/40 text-yellow-900 dark:text-yellow-200 border-b border-yellow-300/50 dark:border-yellow-900/50 px-4 md:px-8 py-2.5 text-[12.5px] md:text-[13px] font-semibold flex items-start md:items-center gap-2">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 mt-0.5 md:mt-0"><path d="M12 9v4M12 17h.01M4.9 20.5h14.2a2 2 0 001.75-2.98l-7.1-12.5a2 2 0 00-3.5 0L3.16 17.52A2 2 0 004.9 20.5z"/></svg>
-        <span>Стандартное расписание — изменения применятся ко всем будущим неделям без замены.</span>
+        <span>Стандартное расписание - изменения применятся ко всем будущим неделям без замены.</span>
       </div>
 
       <header className="px-4 md:px-8 pt-5 md:pt-6 pb-4 border-b border-line-light dark:border-line-dark bg-[#faf6ee] dark:bg-[#141210]">
@@ -130,7 +130,7 @@ export default function AdminTemplate() {
             <button onClick={sel.copySelection} className="text-[13px] font-semibold px-3 py-1.5 rounded-lg bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark">Копировать (Ctrl+C)</button>
             {sel.clipboard && <button onClick={doPaste} className="text-[13px] font-semibold px-3 py-1.5 rounded-lg bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark">Вставить (Ctrl+V)</button>}
             <button onClick={sel.clearSelection} className="ml-auto text-[13px] font-medium text-ink-2-light dark:text-ink-2-dark">Отмена</button>
-            <div className="text-[11px] text-ink-3-light dark:text-ink-3-dark hidden md:block">Shift-клик — прямоугольник · Ctrl+A — всё</div>
+            <div className="text-[11px] text-ink-3-light dark:text-ink-3-dark hidden md:block">Shift-клик - прямоугольник · Ctrl+A - всё</div>
           </div>
         )}
       </header>
@@ -230,7 +230,7 @@ function TemplateDrawer({ day, className, number, time, groups, dicts, hasClipbo
       <div className="p-6 border-b border-line-light dark:border-line-dark">
         <div className="text-[11px] font-bold tracking-[.1em] uppercase text-ink-3-light dark:text-ink-3-dark mb-1.5">Класс {className} · {day}</div>
         <h2 className="font-serif text-[26px] -tracking-[.01em] font-normal leading-tight">{number}-й урок</h2>
-        <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} — {time.timeEnd}</div>
+        <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} - {time.timeEnd}</div>
         {hasClipboard && (
           <button onClick={onPaste} className="mt-3 w-full py-2 rounded-lg bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark">
             Вставить из буфера (Ctrl+V)

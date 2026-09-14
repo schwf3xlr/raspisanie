@@ -231,7 +231,7 @@ function TemplateEditor({ day, className, number, time, groups, dicts, onClose, 
             Класс {className} · {day}
           </div>
           <h2 className="font-serif text-[24px] -tracking-[.01em] font-normal leading-tight">{number}-й урок</h2>
-          <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} — {time.timeEnd}</div>
+          <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} - {time.timeEnd}</div>
         </div>
         <div className="px-6 py-5 space-y-4">
           {editGroups.map((g, i) => (

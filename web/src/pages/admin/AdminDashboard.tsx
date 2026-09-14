@@ -16,16 +16,16 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 mb-10">
-        <StatCard label="Классов" value={stats?.classes ?? '—'} />
-        <StatCard label="Учителей" value={stats?.teachers ?? '—'} />
-        <StatCard label="Предметов" value={stats?.subjects ?? '—'} />
-        <StatCard label="Кабинетов" value={stats?.rooms ?? '—'} />
+        <StatCard label="Классов" value={stats?.classes ?? '-'} />
+        <StatCard label="Учителей" value={stats?.teachers ?? '-'} />
+        <StatCard label="Предметов" value={stats?.subjects ?? '-'} />
+        <StatCard label="Кабинетов" value={stats?.rooms ?? '-'} />
       </div>
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4 mb-10">
-        <StatCard label="В шаблоне" value={stats?.templateLessons ?? '—'} small />
-        <StatCard label="Замен" value={stats?.overrides ?? '—'} small accent={!!stats?.overrides} />
-        <StatCard label="На дистанте" value={stats?.distant ?? '—'} small accent={!!stats?.distant} />
-        <StatCard label="Опубликовано дней" value={stats?.published ?? '—'} small />
+        <StatCard label="В шаблоне" value={stats?.templateLessons ?? '-'} small />
+        <StatCard label="Замен" value={stats?.overrides ?? '-'} small accent={!!stats?.overrides} />
+        <StatCard label="На дистанте" value={stats?.distant ?? '-'} small accent={!!stats?.distant} />
+        <StatCard label="Опубликовано дней" value={stats?.published ?? '-'} small />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">

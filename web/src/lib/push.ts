@@ -3,7 +3,7 @@ import { PushNotifications } from '@capacitor/push-notifications';
 import { api } from './api';
 import type { SavedViewer } from './types';
 
-// Модуль работает только на нативной платформе Android/iOS. В браузере — no-op.
+// Модуль работает только на нативной платформе Android/iOS. В браузере - no-op.
 
 const TOKEN_KEY = 'push_token';
 const LAST_VIEWER_KEY = 'push_last_viewer';
@@ -52,7 +52,7 @@ export async function initPush({ viewer, onNotificationTap }: RegistrationOpts):
     });
 
     PushNotifications.addListener('pushNotificationReceived', notification => {
-      // Foreground-уведомление. Android по умолчанию НЕ показывает системный алерт в foreground —
+      // Foreground-уведомление. Android по умолчанию НЕ показывает системный алерт в foreground -
       // просто логируем; ученик увидит новое расписание при следующем открытии.
       console.log('[push] получено в foreground:', notification.title, notification.body);
     });
@@ -73,7 +73,7 @@ export async function initPush({ viewer, onNotificationTap }: RegistrationOpts):
 export async function syncViewer(viewer: SavedViewer | null): Promise<void> {
   if (!isPushSupported()) return;
   const token = localStorage.getItem(TOKEN_KEY);
-  if (!token) return; // токен ещё не получен — придёт через registration listener
+  if (!token) return; // токен ещё не получен - придёт через registration listener
 
   const prev = localStorage.getItem(LAST_VIEWER_KEY);
   const nextKey = viewerKey(viewer);

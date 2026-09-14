@@ -5,7 +5,7 @@ import { config } from './config.js';
 import { registerRoutes } from './routes.js';
 import { registerAdminRoutes } from './routes-admin.js';
 import { cleanupExpiredSessions } from './auth.js';
-import { seedIfEmpty } from './seed.js';
+import { resortClassesIfNeeded, seedIfEmpty } from './seed.js';
 import { db } from './db.js';
 
 const app = Fastify({ logger: true });
@@ -32,12 +32,16 @@ await registerAdminRoutes(app);
 try {
   const s = await seedIfEmpty();
   if (s.seeded) {
-    app.log.info(`Первый запуск — засеяно ${s.classes} классов, ${s.lessons} уроков.`);
+    app.log.info(`Первый запуск - засеяно ${s.classes} классов, ${s.lessons} уроков.`);
   } else {
     app.log.info(`В БД ${s.classes} классов, ${s.lessons} уроков.`);
   }
+  const r = await resortClassesIfNeeded();
+  if (r.updated > 0) {
+    app.log.info(`Пересчитан порядок классов: обновлено ${r.updated} из ${r.total}.`);
+  }
 } catch (err) {
-  app.log.error({ err }, 'Ошибка при seed');
+  app.log.error({ err }, 'Ошибка при seed/resort');
 }
 
 const cleanupInterval = setInterval(() => {

@@ -180,6 +180,24 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
   );
 
+  // Пересчитать sortKey всех классов по автологике «5А=501, 9А=901, 10А=1001…».
+  app.post(
+    '/api/admin/classes/resort',
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
+    async () => {
+      const all = await db.class.findMany();
+      let updated = 0;
+      for (const c of all) {
+        const key = guessSortKey(c.name);
+        if (c.sortKey !== key) {
+          await db.class.update({ where: { id: c.id }, data: { sortKey: key } });
+          updated++;
+        }
+      }
+      return { ok: true, updated, total: all.length };
+    },
+  );
+
   // Classes
   app.post<{ Body: { name: string; sortKey?: number } }>(
     '/api/admin/class',

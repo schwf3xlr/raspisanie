@@ -21,7 +21,7 @@ export function useAppVersion(): AppVersion | null {
           build: x.build,
           isNative: true,
         }))
-        .catch(() => setInfo({ label: '—', version: '', build: '', isNative: true }));
+        .catch(() => setInfo({ label: '-', version: '', build: '', isNative: true }));
     } else {
       setInfo({ label: 'веб-версия', version: 'web', build: '', isNative: false });
     }

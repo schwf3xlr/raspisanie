@@ -365,7 +365,7 @@ function MobileEditor({ date, className, number, time, isOverride, isDistant, is
             Класс {className} · {fmtDate(fromISODate(date))}
           </div>
           <h2 className="font-serif text-[24px] -tracking-[.01em] font-normal leading-tight">{number}-й урок</h2>
-          <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} — {time.timeEnd}</div>
+          <div className="text-[12.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1">{time.timeStart} - {time.timeEnd}</div>
           {isOverride && <div className="mt-2 inline-flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark text-[10.5px] font-bold tracking-[.06em] uppercase px-2 py-1 rounded-full">Замена</div>}
         </div>
 

@@ -129,7 +129,7 @@ export function useGridSelection({ classes, numbers, groupsAt, onPaste, onAfterP
       pasted++;
     }
     if (pasted > 0 && onAfterPaste) {
-      try { await onAfterPaste(); } catch { /* refresh недоступен — не блокируем paste */ }
+      try { await onAfterPaste(); } catch { /* refresh недоступен - не блокируем paste */ }
     }
     return { pasted };
   }, [clipboard, anchor, classes, numbers, classIdx, numberIdx, onPaste, onAfterPaste]);

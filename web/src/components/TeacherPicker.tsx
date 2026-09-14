@@ -25,10 +25,10 @@ export default function TeacherPicker({ teachers, onPick, onSwitchToClass }: Pro
           У
         </div>
         <h1 className="font-serif text-[40px] -tracking-[.02em] leading-[1.05] mb-3">
-          Выбери <em className="italic text-accent dark:text-accent-dark">себя</em> из списка
+          Выберите <em className="italic text-accent dark:text-accent-dark">себя</em> из списка
         </h1>
         <p className="text-ink-2-light dark:text-ink-2-dark text-[15px] leading-relaxed mb-6">
-          Мы запомним выбор — при следующем открытии сразу покажем твоё расписание.
+          Мы запомним выбор - при следующем открытии сразу покажем Ваше расписание.
         </p>
 
         <div className="flex items-center gap-2 mb-4">
