@@ -26,6 +26,22 @@ export interface Teacher {
 }
 
 export type ViewMode = 'class' | 'teacher';
+
+export interface DayAllCell {
+  className: string;
+  number: number;
+  lesson: Lesson | null;
+}
+export interface DayAllResponse {
+  date: string;
+  day: string | null;
+  published: boolean;
+  classes: string[];
+  numbers: number[];
+  timeByNumber: Array<{ number: number; timeStart: string; timeEnd: string }>;
+  cells: DayAllCell[];
+  distantAllDayByClass: Record<string, string | null>;
+}
 export interface SavedViewer {
   mode: ViewMode;
   className?: string;

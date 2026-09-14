@@ -104,11 +104,40 @@ export interface AdminStats {
   rooms: number;
 }
 
+export type AdminRole = 'school' | 'tech';
+
+export interface AdminMe {
+  authenticated: boolean;
+  role?: AdminRole;
+  login?: string;
+  displayName?: string | null;
+}
+
+export interface AdminUser {
+  id: number;
+  login: string;
+  role: AdminRole;
+  displayName: string | null;
+  createdAt: string;
+}
+
 export const adminApi = {
   login: (login: string, password: string) =>
-    req<{ ok: true }>('/login', { method: 'POST', body: JSON.stringify({ login, password }) }),
+    req<{ ok: true; role: AdminRole; login: string; displayName: string | null }>(
+      '/login',
+      { method: 'POST', body: JSON.stringify({ login, password }) },
+    ),
   logout: () => req<{ ok: true }>('/logout', { method: 'POST' }),
-  me: () => req<{ authenticated: boolean }>('/me'),
+  me: () => req<AdminMe>('/me'),
+
+  // управление админами (только tech)
+  users: () => req<{ users: AdminUser[] }>('/users'),
+  createUser: (payload: { login: string; password: string; role: AdminRole; displayName?: string }) =>
+    req<AdminUser>('/users', { method: 'POST', body: JSON.stringify(payload) }),
+  updateUser: (id: number, payload: { password?: string; role?: AdminRole; displayName?: string }) =>
+    req<AdminUser>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  deleteUser: (id: number) =>
+    req<{ ok: true }>(`/users/${id}`, { method: 'DELETE' }),
 
   stats: () => req<AdminStats>('/stats'),
 
@@ -152,7 +181,7 @@ export const adminApi = {
 
   // day (grid по дате)
   day: (date: string) => req<AdminDayResponse>(`/day?date=${date}`),
-  saveOverride: (payload: { date: string; className: string; number: number; groups: AdminGroup[] }) =>
+  saveOverride: (payload: { date: string; className: string; number: number; groups: AdminGroup[]; timeStart?: string; timeEnd?: string }) =>
     req<{ ok: true }>('/override', { method: 'PUT', body: JSON.stringify(payload) }),
   clearOverride: (payload: { date: string; className: string; number: number }) =>
     req<{ ok: true }>('/override', { method: 'DELETE', body: JSON.stringify(payload) }),

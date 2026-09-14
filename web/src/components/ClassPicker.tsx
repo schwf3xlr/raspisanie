@@ -13,17 +13,31 @@ function parallelOf(cls: string): '5-6' | '7-8' | '9' | '10-11' | 'other' {
   return '10-11';
 }
 
-const GROUP_LABELS: Record<string, string> = {
-  '5-6': '5–6 классы',
-  '7-8': '7–8 классы',
+type GroupKey = '5-6' | '7-8' | '9' | '10-11' | 'other';
+// Явный порядок отображения групп (сверху вниз).
+const GROUP_ORDER: GroupKey[] = ['5-6', '7-8', '9', '10-11', 'other'];
+const GROUP_LABELS: Record<GroupKey, string> = {
+  '5-6': '5-6 классы',
+  '7-8': '7-8 классы',
   '9': '9 классы',
-  '10-11': '10–11 классы',
+  '10-11': '10-11 классы',
   'other': 'Другие',
 };
 
+function classSortKey(name: string): number {
+  const m = name.match(/^(\d{1,2})\s*([А-Яа-яA-Za-z]?)/);
+  if (!m) return 9999;
+  const n = parseInt(m[1]!, 10);
+  const letter = (m[2] ?? '').toUpperCase();
+  const letterOrder = letter ? letter.charCodeAt(0) - 'А'.charCodeAt(0) + 1 : 0;
+  return n * 100 + Math.max(0, Math.min(99, letterOrder));
+}
+
 export default function ClassPicker({ classes, onPick, onSwitchToTeacher }: Props) {
-  const groups: Record<string, string[]> = { '5-6': [], '7-8': [], '9': [], '10-11': [], 'other': [] };
+  const groups: Record<GroupKey, string[]> = { '5-6': [], '7-8': [], '9': [], '10-11': [], 'other': [] };
   for (const c of classes) groups[parallelOf(c)].push(c);
+  // Внутри каждой группы - в естественном порядке (5А, 5Б, 6А…), даже если API вернул иначе.
+  for (const k of GROUP_ORDER) groups[k].sort((a, b) => classSortKey(a) - classSortKey(b));
 
   return (
     <div className="max-w-2xl mx-auto px-6 pb-10">
@@ -47,8 +61,10 @@ export default function ClassPicker({ classes, onPick, onSwitchToTeacher }: Prop
         )}
       </div>
 
-      {Object.entries(groups).map(([key, items]) =>
-        items.length === 0 ? null : (
+      {GROUP_ORDER.map(key => {
+        const items = groups[key];
+        if (items.length === 0) return null;
+        return (
           <div key={key} className="mt-8 first:mt-6">
             <h3 className="text-[12px] font-bold tracking-[.1em] uppercase text-ink-3-light dark:text-ink-3-dark mb-3">
               {GROUP_LABELS[key]}
@@ -65,8 +81,8 @@ export default function ClassPicker({ classes, onPick, onSwitchToTeacher }: Prop
               ))}
             </div>
           </div>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }

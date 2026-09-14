@@ -106,6 +106,110 @@ export async function registerRoutes(app: FastifyInstance) {
     return { teachers: rows.map(t => ({ id: t.id, fullName: t.fullName, shortName: t.shortName })) };
   });
 
+  // День целиком: все классы + все уроки одной таблицей. Публичный эндпоинт.
+  // Возвращает published: true/false; если false - lessons: [].
+  app.get<{ Querystring: { date?: string } }>(
+    '/api/day-all',
+    async (req) => {
+      const dateIso = req.query?.date ?? toISODate(new Date());
+      const dbDate = toDbDate(dateIso);
+      const dayName = dayNameFromDate(fromISODate(dateIso));
+
+      const [publishedRow, classes, overrides, distant, timeSlots, dicts] = await Promise.all([
+        db.publishedDay.findUnique({ where: { date: dbDate } }),
+        db.class.findMany({ orderBy: { sortKey: 'asc' } }),
+        db.lessonOverride.findMany({ where: { date: dbDate } }),
+        db.distantMark.findMany({ where: { date: dbDate } }),
+        dayName ? db.timeSlot.findMany({ where: { day: dayName }, orderBy: { number: 'asc' } }) : Promise.resolve([]),
+        loadDicts(),
+      ]);
+      const templates = dayName
+        ? await db.lessonTemplate.findMany({ where: { day: dayName } })
+        : [];
+
+      const published = !!publishedRow;
+
+      // Собираем все номера уроков (у разных классов может быть разное количество).
+      const numbers = new Set<number>();
+      for (const t of templates) numbers.add(t.number);
+      for (const o of overrides) numbers.add(o.number);
+      for (const s of timeSlots) numbers.add(s.number);
+      const sortedNumbers = [...numbers].sort((a, b) => a - b);
+
+      // (className, number) → override
+      const overrideByKey = new Map<string, typeof overrides[number]>();
+      for (const o of overrides) overrideByKey.set(`${o.className}::${o.number}`, o);
+      // (day, className, number) → template
+      const templateByKey = new Map<string, typeof templates[number]>();
+      for (const t of templates) templateByKey.set(`${t.className}::${t.number}`, t);
+      // (className) → note or null; и (className, number) → note
+      const distantWholeByClass = new Map<string, string | null>();
+      const distantByClassNum = new Map<string, string | null>();
+      for (const d of distant) {
+        if (d.lessonNumber == null) distantWholeByClass.set(d.className, d.note);
+        else distantByClassNum.set(`${d.className}::${d.lessonNumber}`, d.note);
+      }
+
+      // Для каждой ячейки собираем итоговый LessonDTO или null (нет урока).
+      const cells: Array<{
+        className: string;
+        number: number;
+        lesson: LessonDTO | null;
+      }> = [];
+
+      if (published && dayName) {
+        for (const cls of classes) {
+          for (const n of sortedNumbers) {
+            const override = overrideByKey.get(`${cls.name}::${n}`);
+            const template = templateByKey.get(`${cls.name}::${n}`);
+            const source = override ?? template;
+            if (!source) { cells.push({ className: cls.name, number: n, lesson: null }); continue; }
+            if (override?.isCancelled) { cells.push({ className: cls.name, number: n, lesson: null }); continue; }
+            const groups = resolveGroups(parseGroups(source.groups), dicts);
+            if (groups.length === 0) { cells.push({ className: cls.name, number: n, lesson: null }); continue; }
+            const wholeDay = distantWholeByClass.has(cls.name);
+            const lessonNote = distantByClassNum.get(`${cls.name}::${n}`);
+            cells.push({
+              className: cls.name,
+              number: n,
+              lesson: {
+                number: n,
+                timeStart: source.timeStart,
+                timeEnd: source.timeEnd,
+                groups,
+                fromOverride: !!override,
+                isCancelled: false,
+                distant: wholeDay || lessonNote !== undefined
+                  ? { lessonLevel: true, note: lessonNote ?? distantWholeByClass.get(cls.name) ?? null }
+                  : null,
+              },
+            });
+          }
+        }
+      }
+
+      // Время на каждый номер урока: берём из timeSlots; если у ячейки override с другим временем -
+      // это уже в самой lesson.timeStart/timeEnd.
+      const timeByNumber = new Map<number, { timeStart: string; timeEnd: string }>();
+      for (const s of timeSlots) timeByNumber.set(s.number, { timeStart: s.timeStart, timeEnd: s.timeEnd });
+
+      return {
+        date: dateIso,
+        day: dayName,
+        published,
+        classes: classes.map(c => c.name),
+        numbers: sortedNumbers,
+        timeByNumber: sortedNumbers.map(n => ({
+          number: n,
+          timeStart: timeByNumber.get(n)?.timeStart ?? '',
+          timeEnd:   timeByNumber.get(n)?.timeEnd ?? '',
+        })),
+        cells,
+        distantAllDayByClass: Object.fromEntries(distantWholeByClass),
+      };
+    },
+  );
+
   // Ученический эндпоинт: неделя вокруг даты для класса.
   // Все дни возвращаются, но published: false скрывает содержимое.
   app.get<{ Params: { className: string }; Querystring: { date?: string } }>(

@@ -85,7 +85,7 @@ export default function AdminLogin() {
         </form>
 
         <div className="mt-8 pt-6 border-t border-line-light dark:border-line-dark text-[12.5px] text-ink-3-light dark:text-ink-3-dark">
-          Логин и пароль задаются в файле <code className="bg-panel-light dark:bg-panel-dark px-1.5 py-0.5 rounded text-ink-2-light dark:text-ink-2-dark">api/.env</code>.
+          Новых администраторов заводит технический администратор в разделе «Администраторы».
         </div>
       </div>
     </div>

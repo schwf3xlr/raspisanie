@@ -191,7 +191,7 @@ export default function Landing() {
                 </Link>
               </div>
               <div className="text-[12px] text-ink-3-light dark:text-ink-3-dark">
-                Пока APK не собран - работает как веб-приложение через «Добавить на главный экран».
+                При выходе новой версии приложение само предложит обновиться.
               </div>
             </div>
 
@@ -228,34 +228,41 @@ export default function Landing() {
       </section>
 
       <footer className="border-t border-line-light dark:border-line-dark py-10 md:py-14 px-5 md:px-10">
-        <div className="max-w-6xl mx-auto grid gap-8 md:grid-cols-[1.5fr_1fr] md:items-end">
+        <div className="max-w-6xl mx-auto grid gap-10 md:gap-14 md:grid-cols-[1.4fr_1fr_1fr]">
           <div>
             <div className="flex items-center gap-3 mb-4">
               <SchoolMark small />
               <div className="font-semibold text-[15px]">{shortName}</div>
             </div>
-            <p className="text-ink-2-light dark:text-ink-2-dark text-[13.5px] leading-[1.55] max-w-md">
+            <p className="text-ink-2-light dark:text-ink-2-dark text-[13.5px] leading-[1.55] max-w-sm">
               {fullName}
             </p>
-            <a
-              href="mailto:schwf3xlr@mail.ru"
-              className="inline-block mt-3 text-ink-2-light dark:text-ink-2-dark text-[13.5px] hover:text-ink-light dark:hover:text-ink-dark"
-            >
-              schwf3xlr@mail.ru
-            </a>
           </div>
-          <div className="flex flex-wrap gap-x-6 gap-y-2 md:justify-end text-[13.5px] text-ink-2-light dark:text-ink-2-dark">
-            <Link to="/app" className="hover:text-ink-light dark:hover:text-ink-dark">Открыть</Link>
-            <a href="#features" className="hover:text-ink-light dark:hover:text-ink-dark">Возможности</a>
-            <a href="#download" className="hover:text-ink-light dark:hover:text-ink-dark">Скачать</a>
-            <Link to="/privacy" className="hover:text-ink-light dark:hover:text-ink-dark">Политика конфиденциальности</Link>
-            <Link to="/terms" className="hover:text-ink-light dark:hover:text-ink-dark">Пользовательское соглашение</Link>
-            <Link to="/admin" className="hover:text-ink-light dark:hover:text-ink-dark">Панель управления</Link>
+
+          <div>
+            <div className="text-[11.5px] font-bold tracking-[.14em] uppercase text-ink-3-light dark:text-ink-3-dark mb-3">
+              Навигация
+            </div>
+            <ul className="space-y-2 text-[13.5px] text-ink-2-light dark:text-ink-2-dark">
+              <li><Link to="/app" className="hover:text-ink-light dark:hover:text-ink-dark">Открыть расписание</Link></li>
+              <li><a href="#features" className="hover:text-ink-light dark:hover:text-ink-dark">Возможности</a></li>
+              <li><a href="#download" className="hover:text-ink-light dark:hover:text-ink-dark">Скачать</a></li>
+            </ul>
+          </div>
+
+          <div>
+            <div className="text-[11.5px] font-bold tracking-[.14em] uppercase text-ink-3-light dark:text-ink-3-dark mb-3">
+              Контакты и документы
+            </div>
+            <ul className="space-y-2 text-[13.5px] text-ink-2-light dark:text-ink-2-dark">
+              <li><a href="mailto:schwf3xlr@mail.ru" className="hover:text-ink-light dark:hover:text-ink-dark">schwf3xlr@mail.ru</a></li>
+              <li><Link to="/privacy" className="hover:text-ink-light dark:hover:text-ink-dark">Политика конфиденциальности</Link></li>
+              <li><Link to="/terms" className="hover:text-ink-light dark:hover:text-ink-dark">Пользовательское соглашение</Link></li>
+            </ul>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-line-light dark:border-line-dark text-[12.5px] text-ink-3-light dark:text-ink-3-dark flex justify-between items-center flex-wrap gap-2">
-          <span>© 2026 «Расписание СОШ №44»</span>
-          <span>Расписание работает офлайн</span>
+        <div className="max-w-6xl mx-auto mt-10 pt-6 border-t border-line-light dark:border-line-dark text-[12.5px] text-ink-3-light dark:text-ink-3-dark">
+          © 2026 «Расписание СОШ №44»
         </div>
       </footer>
     </div>

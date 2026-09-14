@@ -3,6 +3,7 @@ import { adminApi, type AdminDictionaries, type AdminGroup, type AdminTemplateRe
 import { confirmDialog } from '../../lib/dialog';
 import { DAYS, type DayName } from '../../lib/types';
 import { DictSelect } from './ScheduleGrid';
+import BellsModal from '../../components/admin/BellsModal';
 
 interface Props {
   day: DayName;
@@ -15,6 +16,7 @@ interface Props {
 export default function AdminTemplateMobile({ day, data, dicts, onSetDay, onRefresh }: Props) {
   const [activeClass, setActiveClass] = useState<string>(data.classes[0] ?? '');
   const [editing, setEditing] = useState<{ number: number } | null>(null);
+  const [bellsOpen, setBellsOpen] = useState(false);
 
   const byKey = useMemo(() => {
     const m = new Map<string, AdminGroup[]>();
@@ -85,10 +87,20 @@ export default function AdminTemplateMobile({ day, data, dicts, onSetDay, onRefr
       </div>
 
       <div className="px-4 pt-4 pb-3 bg-[#faf6ee] dark:bg-[#141210]">
-        <h1 className="font-serif text-[26px] -tracking-[.02em] leading-none font-normal">Стандартное расписание</h1>
-        <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] mt-1.5 mb-3">
-          Меняй только когда меняется постоянное.
-        </p>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="min-w-0">
+            <h1 className="font-serif text-[26px] -tracking-[.02em] leading-none font-normal">Стандартное расписание</h1>
+            <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] mt-1.5">
+              Меняйте только когда меняется постоянное.
+            </p>
+          </div>
+          <button
+            onClick={() => setBellsOpen(true)}
+            className="shrink-0 text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark px-3 py-1.5 rounded-full border border-line-light dark:border-line-dark"
+          >
+            Звонки
+          </button>
+        </div>
         <div className="flex gap-1 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-full p-1 overflow-x-auto no-scrollbar">
           {DAYS.map(d => (
             <button key={d} onClick={() => onSetDay(d)}
@@ -183,6 +195,14 @@ export default function AdminTemplateMobile({ day, data, dicts, onSetDay, onRefr
           dicts={dicts}
           onClose={() => setEditing(null)}
           onSaved={async () => { await onRefresh(); }}
+        />
+      )}
+
+      {bellsOpen && (
+        <BellsModal
+          day={day}
+          initial={data.timeSlots}
+          onClose={() => { setBellsOpen(false); void onRefresh(); }}
         />
       )}
     </div>

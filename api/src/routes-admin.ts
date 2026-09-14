@@ -2,11 +2,13 @@ import type { FastifyInstance } from 'fastify';
 import { db } from './db.js';
 import { config, DEFAULT_TIME_SLOTS } from './config.js';
 import {
-  checkCredentials,
+  verifyCredentials,
   createSession,
   destroySession,
-  isAuthenticated,
+  getCurrentAdmin,
+  hashPassword,
   requireAdmin,
+  requireRole,
 } from './auth.js';
 import {
   dayNameFromDate,
@@ -38,19 +40,104 @@ export async function registerAdminRoutes(app: FastifyInstance) {
       if (typeof login !== 'string' || typeof password !== 'string') {
         return reply.code(400).send({ error: 'Некорректные данные' });
       }
-      if (!checkCredentials(login, password)) {
+      const user = await verifyCredentials(login, password);
+      if (!user) {
         await new Promise(r => setTimeout(r, 400));
         return reply.code(401).send({ error: 'Неверный логин или пароль' });
       }
-      await createSession(reply);
-      return { ok: true };
+      await createSession(reply, user.id);
+      return { ok: true, role: user.role, displayName: user.displayName, login: user.login };
     }
   );
   app.post('/api/admin/logout', async (req, reply) => {
     await destroySession(req, reply);
     return { ok: true };
   });
-  app.get('/api/admin/me', async (req) => ({ authenticated: await isAuthenticated(req) }));
+  app.get('/api/admin/me', async (req) => {
+    const me = await getCurrentAdmin(req);
+    if (!me) return { authenticated: false };
+    return { authenticated: true, role: me.role, login: me.login, displayName: me.displayName };
+  });
+
+  // ---------- управление админами (только tech) ----------
+  app.get(
+    '/api/admin/users',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async () => {
+      const users = await db.adminUser.findMany({
+        orderBy: [{ role: 'asc' }, { login: 'asc' }],
+        select: { id: true, login: true, role: true, displayName: true, createdAt: true },
+      });
+      return { users };
+    },
+  );
+
+  app.post<{ Body: { login: string; password: string; role: 'school' | 'tech'; displayName?: string } }>(
+    '/api/admin/users',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req, reply) => {
+      const { login, password, role, displayName } = req.body ?? { login: '', password: '', role: 'school' as const };
+      if (!login?.trim() || !password || password.length < 6) {
+        return reply.code(400).send({ error: 'login и password (минимум 6 символов) обязательны' });
+      }
+      if (role !== 'school' && role !== 'tech') return reply.code(400).send({ error: 'role: school или tech' });
+      const passwordHash = await hashPassword(password);
+      const user = await db.adminUser.create({
+        data: { login: login.trim(), passwordHash, role, displayName: displayName?.trim() || null },
+        select: { id: true, login: true, role: true, displayName: true, createdAt: true },
+      }).catch(() => null);
+      if (!user) return reply.code(409).send({ error: 'Такой логин уже занят' });
+      return user;
+    },
+  );
+
+  app.put<{ Params: { id: string }; Body: { password?: string; role?: 'school' | 'tech'; displayName?: string } }>(
+    '/api/admin/users/:id',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      const cur = await db.adminUser.findUnique({ where: { id } });
+      if (!cur) return reply.code(404).send({ error: 'not found' });
+      const patch: { passwordHash?: string; role?: string; displayName?: string | null } = {};
+      if (req.body.password) {
+        if (req.body.password.length < 6) return reply.code(400).send({ error: 'password: минимум 6 символов' });
+        patch.passwordHash = await hashPassword(req.body.password);
+      }
+      if (req.body.role) {
+        if (req.body.role !== 'school' && req.body.role !== 'tech') return reply.code(400).send({ error: 'role: school или tech' });
+        // Нельзя понизить роль последнего tech-админа.
+        if (cur.role === 'tech' && req.body.role !== 'tech') {
+          const techCount = await db.adminUser.count({ where: { role: 'tech' } });
+          if (techCount <= 1) return reply.code(400).send({ error: 'Нельзя понизить роль последнего технического администратора' });
+        }
+        patch.role = req.body.role;
+      }
+      if (req.body.displayName !== undefined) patch.displayName = req.body.displayName?.trim() || null;
+      const user = await db.adminUser.update({
+        where: { id },
+        data: patch,
+        select: { id: true, login: true, role: true, displayName: true, createdAt: true },
+      });
+      return user;
+    },
+  );
+
+  app.delete<{ Params: { id: string } }>(
+    '/api/admin/users/:id',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req, reply) => {
+      const id = Number(req.params.id);
+      const cur = await db.adminUser.findUnique({ where: { id } });
+      if (!cur) return reply.code(404).send({ error: 'not found' });
+      // Не даём удалить последнего tech-админа - иначе никто не сможет управлять админами.
+      if (cur.role === 'tech') {
+        const techCount = await db.adminUser.count({ where: { role: 'tech' } });
+        if (techCount <= 1) return reply.code(400).send({ error: 'Нельзя удалить последнего технического администратора' });
+      }
+      await db.adminUser.delete({ where: { id } });
+      return { ok: true };
+    },
+  );
 
   // ---------- dashboard ----------
   app.get('/api/admin/stats', { preHandler: (req, reply) => requireAdmin(req, reply) }, async () => {
@@ -346,7 +433,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   );
 
   // Сохранить override: если пусто → отмена урока; если совпадает с шаблоном → удалить override.
-  app.put<{ Body: { date: string; className: string; number: number; groups: GroupRef[] } }>(
+  // timeStart/timeEnd опциональны: если не переданы или пустые — берутся из шаблона звонков.
+  app.put<{ Body: { date: string; className: string; number: number; groups: GroupRef[]; timeStart?: string; timeEnd?: string } }>(
     '/api/admin/override',
     { preHandler: (req, reply) => requireAdmin(req, reply) },
     async (req, reply) => {
@@ -358,8 +446,8 @@ export async function registerAdminRoutes(app: FastifyInstance) {
 
       const clean = (b.groups ?? []).filter(g => g && typeof g.subjectId === 'number');
       const slot = await db.timeSlot.findUnique({ where: { day_number: { day: dayName, number: b.number } } });
-      const timeStart = slot?.timeStart ?? '';
-      const timeEnd = slot?.timeEnd ?? '';
+      const timeStart = (b.timeStart && b.timeStart.trim()) || slot?.timeStart || '';
+      const timeEnd   = (b.timeEnd   && b.timeEnd.trim())   || slot?.timeEnd   || '';
 
       if (clean.length === 0) {
         // Явная отмена урока: сохраняем override с isCancelled=true

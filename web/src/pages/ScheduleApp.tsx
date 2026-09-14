@@ -143,6 +143,9 @@ export default function ScheduleApp() {
             <span className="truncate">{headerLabel} <b className="text-ink-light dark:text-ink-dark font-semibold">{headerSubtitle}</b></span>
           </div>
           <div className="flex gap-1.5 items-center shrink-0">
+            <IconButton title="Вся школа - общая таблица" onClick={() => navigate('/all')}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+            </IconButton>
             {!Capacitor.isNativePlatform() && (
               <IconButton title="Домой" onClick={() => navigate('/')}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"><path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/></svg>
@@ -154,65 +157,85 @@ export default function ScheduleApp() {
           </div>
         </header>
 
-        <div className="py-5 border-b border-line-light dark:border-line-dark">
-          <h1 className="font-serif text-[44px] sm:text-[56px] md:text-[76px] -tracking-[.03em] leading-[.95] break-words">
-            {currentDay?.day ?? '-'}
-          </h1>
-          <div className="flex items-center gap-2.5 mt-3 text-[15px] text-ink-2-light dark:text-ink-2-dark tabular-nums">
-            <span>{fmtDate(currentDate)}</span>
-            {badge && (
-              <span className="inline-flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark px-2.5 py-0.5 rounded-full text-[12.5px] font-semibold">
-                <span className="w-1.5 h-1.5 bg-accent dark:bg-accent-dark rounded-full" />{badge}
-              </span>
-            )}
+        <div className="pt-5 pb-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="min-w-0">
+              <h1 className="font-serif text-[40px] sm:text-[52px] md:text-[72px] -tracking-[.03em] leading-[.95] break-words">
+                {currentDay?.day ?? '-'}
+              </h1>
+              <div className="flex items-center gap-2.5 mt-2.5 text-[14.5px] text-ink-2-light dark:text-ink-2-dark tabular-nums">
+                <span>{fmtDate(currentDate)}</span>
+                {badge && (
+                  <span className="inline-flex items-center gap-1.5 bg-accent-soft dark:bg-accent-soft-dark text-accent dark:text-accent-dark px-2.5 py-0.5 rounded-full text-[12.5px] font-semibold">
+                    <span className="w-1.5 h-1.5 bg-accent dark:bg-accent-dark rounded-full" />{badge}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-between my-5">
-          <button onClick={goPrevWeek} className="w-10 h-10 rounded-xl border border-line-light dark:border-line-dark grid place-items-center text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark hover:bg-panel-light dark:hover:bg-panel-dark">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </button>
-          <button onClick={goToday} className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark tabular-nums">
-            {fmtWeekLabel(monday)}
-          </button>
-          <button onClick={goNextWeek} className="w-10 h-10 rounded-xl border border-line-light dark:border-line-dark grid place-items-center text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark hover:bg-panel-light dark:hover:bg-panel-dark">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6"/></svg>
-          </button>
-        </div>
+        {/* Единый блок недели: ‹ 14-18 сентября › + 5 равных ячеек. */}
+        <div className="mt-1 mb-5 rounded-3xl border border-line-light dark:border-line-dark bg-panel-light/50 dark:bg-panel-dark/50 px-2 py-2">
+          <div className="flex items-center justify-between px-1 pt-1 pb-2">
+            <button
+              onClick={goPrevWeek}
+              aria-label="Предыдущая неделя"
+              className="w-8 h-8 rounded-lg grid place-items-center text-ink-2-light dark:text-ink-2-dark hover:bg-line-2-light dark:hover:bg-line-2-dark"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+            <button
+              onClick={goToday}
+              className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark tabular-nums px-3 py-1 rounded-full"
+            >
+              {fmtWeekLabel(monday)}
+            </button>
+            <button
+              onClick={goNextWeek}
+              aria-label="Следующая неделя"
+              className="w-8 h-8 rounded-lg grid place-items-center text-ink-2-light dark:text-ink-2-dark hover:bg-line-2-light dark:hover:bg-line-2-dark"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 6l6 6-6 6"/></svg>
+            </button>
+          </div>
 
-        <div className="flex gap-1.5 -mx-6 px-6 pb-1.5 overflow-x-auto no-scrollbar mb-4">
-          {week.days.map(d => {
-            const on = d.date === dateIso;
-            const date = fromISODate(d.date);
-            const isToday = isSameDate(date, today);
-            return (
-              <button
-                key={d.date}
-                onClick={() => setDateIso(d.date)}
-                className={[
-                  'flex-shrink-0 min-w-[52px] px-3 py-2 rounded-2xl border transition-colors text-center',
-                  on
-                    ? 'bg-ink-light text-bg-light border-ink-light dark:bg-ink-dark dark:text-bg-dark dark:border-ink-dark'
-                    : d.published
-                      ? 'bg-transparent border-transparent text-ink-2-light dark:text-ink-2-dark hover:bg-panel-light dark:hover:bg-panel-dark'
-                      : 'bg-transparent border-dashed border-line-light dark:border-line-dark text-ink-3-light dark:text-ink-3-dark',
-                ].join(' ')}
-              >
-                <div className={['text-[10.5px] font-semibold tracking-[.06em] uppercase', on ? 'opacity-70' : 'opacity-60'].join(' ')}>
-                  {d.day ? DAY_SHORT[d.day as DayName] ?? d.day : '-'}
-                </div>
-                <div className="font-serif text-[22px] font-medium leading-none tabular-nums mt-0.5">
-                  {date.getDate()}
-                </div>
-                {isToday && (
-                  <div className={['mx-auto mt-1 w-1 h-1 rounded-full', on ? 'bg-white' : 'bg-accent dark:bg-accent-dark'].join(' ')} />
-                )}
-                {d.isDistantAllDay && !on && (
-                  <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-distant dark:text-distant-dark">Дист</div>
-                )}
-              </button>
-            );
-          })}
+          <div className="grid grid-cols-5 gap-1">
+            {week.days.map(d => {
+              const on = d.date === dateIso;
+              const date = fromISODate(d.date);
+              const isToday = isSameDate(date, today);
+              return (
+                <button
+                  key={d.date}
+                  onClick={() => setDateIso(d.date)}
+                  className={[
+                    'flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl border transition-colors text-center min-w-0',
+                    on
+                      ? 'bg-ink-light text-bg-light border-ink-light dark:bg-ink-dark dark:text-bg-dark dark:border-ink-dark'
+                      : d.published
+                        ? 'bg-transparent border-transparent text-ink-2-light dark:text-ink-2-dark hover:bg-panel-light dark:hover:bg-panel-dark'
+                        : 'bg-transparent border-dashed border-line-light dark:border-line-dark text-ink-3-light dark:text-ink-3-dark',
+                  ].join(' ')}
+                >
+                  <div className={['text-[10.5px] font-semibold tracking-[.06em] uppercase leading-none', on ? 'opacity-70' : 'opacity-60'].join(' ')}>
+                    {d.day ? DAY_SHORT[d.day as DayName] ?? d.day : '-'}
+                  </div>
+                  <div className="font-serif text-[20px] sm:text-[22px] font-medium leading-none tabular-nums">
+                    {date.getDate()}
+                  </div>
+                  <div className="h-1.5 mt-0.5 grid place-items-center">
+                    {isToday && (
+                      <span className={['w-1 h-1 rounded-full', on ? 'bg-white' : 'bg-accent dark:bg-accent-dark'].join(' ')} />
+                    )}
+                    {!isToday && d.isDistantAllDay && !on && (
+                      <span className="w-1 h-1 rounded-full bg-distant dark:bg-distant-dark" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {!currentDay ? (

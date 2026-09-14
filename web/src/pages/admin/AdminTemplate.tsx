@@ -5,12 +5,14 @@ import { DAYS, type DayName } from '../../lib/types';
 import ScheduleGrid, { type GridCellData, DictSelect } from './ScheduleGrid';
 import { useGridSelection } from './useGridSelection';
 import AdminTemplateMobile from './AdminTemplateMobile';
+import BellsModal from '../../components/admin/BellsModal';
 
 export default function AdminTemplate() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [day, setDay] = useState<DayName>('Понедельник');
   const [data, setData] = useState<AdminTemplateResponse | null>(null);
   const [dicts, setDicts] = useState<AdminDictionaries | null>(null);
+  const [bellsOpen, setBellsOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const d = await adminApi.template(day);
@@ -41,30 +43,45 @@ export default function AdminTemplate() {
   }, [byKey]);
 
   const conflicts = useMemo(() => {
-    const set = new Set<string>();
-    if (!data) return set;
+    const map = new Map<string, 'teacher' | 'room' | 'both'>();
+    if (!data) return map;
+    const merge = (k: string, kind: 'teacher' | 'room') => {
+      const cur = map.get(k);
+      if (!cur) map.set(k, kind);
+      else if (cur !== kind) map.set(k, 'both');
+    };
     for (const n of numbers) {
       const byTeacher = new Map<number, string[]>();
+      const byRoom = new Map<number, string[]>();
       for (const c of data.classes) {
         const groups = byKey.get(`${c}::${n}`)?.groups ?? [];
-        const seen = new Set<number>();
+        const seenT = new Set<number>();
+        const seenR = new Set<number>();
         for (const g of groups) {
-          if (g.teacherId == null || seen.has(g.teacherId)) continue;
-          seen.add(g.teacherId);
-          const arr = byTeacher.get(g.teacherId) ?? [];
-          arr.push(c);
-          byTeacher.set(g.teacherId, arr);
+          if (g.teacherId != null && !seenT.has(g.teacherId)) {
+            seenT.add(g.teacherId);
+            const arr = byTeacher.get(g.teacherId) ?? [];
+            arr.push(c);
+            byTeacher.set(g.teacherId, arr);
+          }
+          if (g.roomId != null && !seenR.has(g.roomId)) {
+            seenR.add(g.roomId);
+            const arr = byRoom.get(g.roomId) ?? [];
+            arr.push(c);
+            byRoom.set(g.roomId, arr);
+          }
         }
       }
-      for (const [, cls] of byTeacher) if (cls.length > 1) for (const c of cls) set.add(`${c}::${n}`);
+      for (const [, cls] of byTeacher) if (cls.length > 1) for (const c of cls) merge(`${c}::${n}`, 'teacher');
+      for (const [, cls] of byRoom)    if (cls.length > 1) for (const c of cls) merge(`${c}::${n}`, 'room');
     }
-    return set;
+    return map;
   }, [data, numbers, byKey]);
 
   const dataFor = useCallback((cls: string, n: number): GridCellData | null => {
     const l = byKey.get(`${cls}::${n}`);
     if (!l) return null;
-    return { groups: l.groups, isConflict: conflicts.has(`${cls}::${n}`) };
+    return { groups: l.groups, conflict: conflicts.get(`${cls}::${n}`) };
   }, [byKey, conflicts]);
 
   const savePasted = useCallback(async (cls: string, n: number, groups: AdminGroup[]) => {
@@ -108,11 +125,22 @@ export default function AdminTemplate() {
       </div>
 
       <header className="px-4 md:px-8 pt-5 md:pt-6 pb-4 border-b border-line-light dark:border-line-dark bg-[#faf6ee] dark:bg-[#141210]">
-        <div className="mb-4">
-          <h1 className="font-serif text-[28px] md:text-[36px] -tracking-[.02em] leading-none font-normal">Стандартное расписание</h1>
-          <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] md:text-[13.5px] mt-1.5">
-            Меняй, когда меняется постоянное расписание.
-          </p>
+        <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <h1 className="font-serif text-[28px] md:text-[36px] -tracking-[.02em] leading-none font-normal">Стандартное расписание</h1>
+            <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] md:text-[13.5px] mt-1.5">
+              Меняйте, когда меняется постоянное расписание.
+            </p>
+          </div>
+          <button
+            onClick={() => setBellsOpen(true)}
+            className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+              Звонки
+            </span>
+          </button>
         </div>
         <div className="flex gap-1 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-full p-1 w-fit max-w-full overflow-x-auto no-scrollbar">
           {DAYS.map(d => (
@@ -164,6 +192,14 @@ export default function AdminTemplate() {
         )}
       </div>
       </div>{/* /desktop wrapper */}
+
+      {bellsOpen && (
+        <BellsModal
+          day={day}
+          initial={data.timeSlots}
+          onClose={() => { setBellsOpen(false); refresh(); }}
+        />
+      )}
     </div>
   );
 }

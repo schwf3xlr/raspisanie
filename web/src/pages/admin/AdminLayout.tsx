@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { adminApi } from '../../lib/admin-api';
+import { adminApi, type AdminRole } from '../../lib/admin-api';
 import SchoolLogo from '../../components/SchoolLogo';
 import { useAppVersion } from '../../lib/version';
 
@@ -8,12 +8,22 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [checked, setChecked] = useState(false);
+  const [role, setRole] = useState<AdminRole | null>(null);
+  const [me, setMe] = useState<{ login?: string; displayName?: string | null } | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const version = useAppVersion();
 
   useEffect(() => {
     adminApi.me()
-      .then(r => r.authenticated ? setChecked(true) : navigate('/admin/login', { replace: true }))
+      .then(r => {
+        if (r.authenticated) {
+          setChecked(true);
+          setRole(r.role ?? null);
+          setMe({ login: r.login, displayName: r.displayName });
+        } else {
+          navigate('/admin/login', { replace: true });
+        }
+      })
       .catch(() => navigate('/admin/login', { replace: true }));
   }, [navigate]);
 
@@ -45,11 +55,31 @@ export default function AdminLayout() {
         <NavItem to="/admin/template" icon="template" label="Стандартное расписание" />
         <NavItem to="/admin/dictionaries" icon="book" label="Справочники" />
       </nav>
+      {role === 'tech' && (
+        <>
+          <div className="mt-6 mb-2 px-3 text-[10.5px] font-bold tracking-[.12em] uppercase text-ink-3-light dark:text-ink-3-dark">
+            Технический администратор
+          </div>
+          <nav className="flex flex-col gap-0.5">
+            <NavItem to="/admin/users" icon="users" label="Администраторы" />
+          </nav>
+        </>
+      )}
     </>
   );
 
   const bottomActions = (
     <div className="pt-6 border-t border-line-light dark:border-line-dark space-y-1">
+      {me && (
+        <div className="px-3 pb-2 text-[12px] text-ink-3-light dark:text-ink-3-dark">
+          <div className="font-semibold text-ink-2-light dark:text-ink-2-dark truncate">
+            {me.displayName || me.login}
+          </div>
+          <div className="text-[11px] mt-0.5">
+            {role === 'tech' ? 'Технический администратор' : 'Администратор школы'}
+          </div>
+        </div>
+      )}
       <Link to="/app" className="flex items-center gap-3 px-3 py-2 rounded-lg text-[13.5px] text-ink-2-light dark:text-ink-2-dark hover:bg-panel-light dark:hover:bg-panel-dark hover:text-ink-light dark:hover:text-ink-dark transition-colors">
         <IconExternal /> Как видит ученик
       </Link>
@@ -121,7 +151,7 @@ export default function AdminLayout() {
   );
 }
 
-function NavItem({ to, end, icon, label }: { to: string; end?: boolean; icon: 'grid' | 'calendar' | 'template' | 'book'; label: string }) {
+function NavItem({ to, end, icon, label }: { to: string; end?: boolean; icon: 'grid' | 'calendar' | 'template' | 'book' | 'users'; label: string }) {
   return (
     <NavLink to={to} end={end}
       className={({ isActive }) => [
@@ -136,6 +166,7 @@ function NavItem({ to, end, icon, label }: { to: string; end?: boolean; icon: 'g
         {icon === 'calendar' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>}
         {icon === 'template' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>}
         {icon === 'book' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M4 4h11a4 4 0 014 4v13H7a3 3 0 01-3-3V4z"/><path d="M4 18a3 3 0 013-3h12"/></svg>}
+        {icon === 'users' && <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>}
       </span>
       {label}
     </NavLink>

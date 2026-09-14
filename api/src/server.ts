@@ -4,7 +4,7 @@ import cookie from '@fastify/cookie';
 import { config } from './config.js';
 import { registerRoutes } from './routes.js';
 import { registerAdminRoutes } from './routes-admin.js';
-import { cleanupExpiredSessions } from './auth.js';
+import { cleanupExpiredSessions, ensureInitialAdmin } from './auth.js';
 import { resortClassesIfNeeded, seedIfEmpty } from './seed.js';
 import { db } from './db.js';
 
@@ -40,8 +40,12 @@ try {
   if (r.updated > 0) {
     app.log.info(`Пересчитан порядок классов: обновлено ${r.updated} из ${r.total}.`);
   }
+  const admin = await ensureInitialAdmin();
+  if (admin?.created) {
+    app.log.info(`Создан первый tech-администратор: логин "${admin.login}" (пароль - из ADMIN_PASSWORD в .env).`);
+  }
 } catch (err) {
-  app.log.error({ err }, 'Ошибка при seed/resort');
+  app.log.error({ err }, 'Ошибка при seed/resort/admin-bootstrap');
 }
 
 const cleanupInterval = setInterval(() => {
@@ -50,7 +54,7 @@ const cleanupInterval = setInterval(() => {
 
 try {
   await app.listen({ port: config.port, host: '0.0.0.0' });
-  app.log.info(`Админ: логин "${config.adminLogin}" (пароль из .env)`);
+  app.log.info('Админов теперь можно заводить прямо в панели управления (роль tech).');
 } catch (err) {
   app.log.error(err);
   process.exit(1);

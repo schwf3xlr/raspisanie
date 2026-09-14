@@ -1,4 +1,4 @@
-import type { School, Teacher, Week } from './types';
+import type { DayAllResponse, School, Teacher, Week } from './types';
 
 const BASE = (import.meta.env.VITE_API_BASE ?? '') + '/api';
 
@@ -24,6 +24,8 @@ export const api = {
     json<Week>(`/week/${encodeURIComponent(className)}${dateIso ? `?date=${dateIso}` : ''}`),
   weekTeacher: (teacherId: number, dateIso?: string) =>
     json<Week>(`/week-teacher/${teacherId}${dateIso ? `?date=${dateIso}` : ''}`),
+  dayAll: (dateIso?: string) =>
+    json<DayAllResponse>(`/day-all${dateIso ? `?date=${dateIso}` : ''}`),
 
   pushRegister: (token: string, opts: { platform?: string; className?: string | null; teacherId?: number | null }) =>
     json<{ ok: boolean }>('/push/register', {

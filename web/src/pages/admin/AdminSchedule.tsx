@@ -22,7 +22,6 @@ export default function AdminSchedule() {
   const [dicts, setDicts] = useState<AdminDictionaries | null>(null);
   const [classPopover, setClassPopover] = useState<string | null>(null);
   const [numberPopover, setNumberPopover] = useState<number | null>(null);
-  const [bellsOpen, setBellsOpen] = useState(false);
   const [wholeSchoolOpen, setWholeSchoolOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,7 +93,7 @@ export default function AdminSchedule() {
       fromOverride: !!override,
       isCancelled: !!override?.isCancelled,
       isDistant,
-      isConflict: conflicts.has(`${cls}::${n}`),
+      conflict: conflicts.get(`${cls}::${n}`),
     };
   }, [templateByKey, overrideByKey, distantAllDay, distantByLesson, conflicts]);
 
@@ -204,7 +203,6 @@ export default function AdminSchedule() {
         onSetMonday={setMonday}
         onSetDate={iso => { setDateIso(iso); setClassPopover(null); setNumberPopover(null); }}
         onRefresh={refresh}
-        onOpenBells={() => setBellsOpen(true)}
         onOpenWholeSchool={() => setWholeSchoolOpen(true)}
         onPublish={publishDay}
         onUnpublish={unpublishDay}
@@ -243,12 +241,6 @@ export default function AdminSchedule() {
               {isWholeSchoolDistant && (
                 <span className="w-1.5 h-1.5 bg-distant dark:bg-distant-dark rounded-full animate-pulse ml-0.5" />
               )}
-            </button>
-            <button onClick={() => setBellsOpen(true)} className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark">
-              <span className="inline-flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-                Звонки
-              </span>
             </button>
           </div>
         </div>
@@ -349,10 +341,6 @@ export default function AdminSchedule() {
         )}
       </div>
       </div>{/* /desktop wrapper */}
-
-      {bellsOpen && (
-        <BellsModal day={data.day} initial={data.timeSlots} onClose={() => { setBellsOpen(false); refresh(); }} />
-      )}
 
       {wholeSchoolOpen && (
         <WholeSchoolModal
@@ -484,26 +472,45 @@ function plural(n: number, one: string, few: string, many: string): string {
   return many;
 }
 
-function computeConflicts(classes: string[], numbers: number[], groupsAt: (cls: string, n: number) => AdminGroup[]): Set<string> {
-  const conflicts = new Set<string>();
+type ConflictMap = Map<string, 'teacher' | 'room' | 'both'>;
+
+function mergeConflict(map: ConflictMap, key: string, kind: 'teacher' | 'room') {
+  const cur = map.get(key);
+  if (!cur) map.set(key, kind);
+  else if (cur !== kind) map.set(key, 'both');
+}
+
+function computeConflicts(classes: string[], numbers: number[], groupsAt: (cls: string, n: number) => AdminGroup[]): ConflictMap {
+  const map: ConflictMap = new Map();
   for (const n of numbers) {
+    // teacher-конфликт: один учитель ведёт >1 класса в этот номер урока
     const byTeacher = new Map<number, string[]>();
+    // room-конфликт: один кабинет занят >1 классом в этот номер урока
+    const byRoom = new Map<number, string[]>();
+
     for (const c of classes) {
       const groups = groupsAt(c, n);
-      const seenThisCell = new Set<number>();
+      const teachersThisCell = new Set<number>();
+      const roomsThisCell = new Set<number>();
       for (const g of groups) {
-        if (g.teacherId == null || seenThisCell.has(g.teacherId)) continue;
-        seenThisCell.add(g.teacherId);
-        const arr = byTeacher.get(g.teacherId) ?? [];
-        arr.push(c);
-        byTeacher.set(g.teacherId, arr);
+        if (g.teacherId != null && !teachersThisCell.has(g.teacherId)) {
+          teachersThisCell.add(g.teacherId);
+          const arr = byTeacher.get(g.teacherId) ?? [];
+          arr.push(c);
+          byTeacher.set(g.teacherId, arr);
+        }
+        if (g.roomId != null && !roomsThisCell.has(g.roomId)) {
+          roomsThisCell.add(g.roomId);
+          const arr = byRoom.get(g.roomId) ?? [];
+          arr.push(c);
+          byRoom.set(g.roomId, arr);
+        }
       }
     }
-    for (const [, cls] of byTeacher) {
-      if (cls.length > 1) for (const c of cls) conflicts.add(`${c}::${n}`);
-    }
+    for (const [, cls] of byTeacher) if (cls.length > 1) for (const c of cls) mergeConflict(map, `${c}::${n}`, 'teacher');
+    for (const [, cls] of byRoom)    if (cls.length > 1) for (const c of cls) mergeConflict(map, `${c}::${n}`, 'room');
   }
-  return conflicts;
+  return map;
 }
 
 function MultiSelectBar({ count, hasClipboard, onCopy, onPaste, onClear }: {
@@ -553,13 +560,17 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
   onClose: () => void; onSaved: () => void;
 }) {
   const [editGroups, setEditGroups] = useState<AdminGroup[]>(groups.length ? groups : [{ subjectId: 0, teacherId: null, roomId: null }]);
+  const [editTimeStart, setEditTimeStart] = useState(time.timeStart);
+  const [editTimeEnd, setEditTimeEnd] = useState(time.timeEnd);
   const [busy, setBusy] = useState(false);
   const [distantNote, setDistantNote] = useState('');
 
   useEffect(() => {
     setEditGroups(groups.length ? groups : [{ subjectId: 0, teacherId: null, roomId: null }]);
+    setEditTimeStart(time.timeStart);
+    setEditTimeEnd(time.timeEnd);
     setDistantNote('');
-  }, [date, className, number, groups]);
+  }, [date, className, number, groups, time.timeStart, time.timeEnd]);
 
   if (!dicts) return null;
   const subjOpts = dicts.subjects.map(s => ({ id: s.id, label: s.name }));
@@ -569,7 +580,16 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
   const save = async () => {
     const clean = editGroups.filter(g => g.subjectId > 0);
     setBusy(true);
-    try { await adminApi.saveOverride({ date, className, number, groups: clean }); onSaved(); onClose(); }
+    try {
+      // Отправляем нестандартное время, только если оно отличается от шаблонного.
+      const ts = editTimeStart.trim();
+      const te = editTimeEnd.trim();
+      const timeOverride = (ts && te && (ts !== time.timeStart || te !== time.timeEnd))
+        ? { timeStart: ts, timeEnd: te }
+        : {};
+      await adminApi.saveOverride({ date, className, number, groups: clean, ...timeOverride });
+      onSaved(); onClose();
+    }
     finally { setBusy(false); }
   };
   const resetToTemplate = async () => {
@@ -607,6 +627,30 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
       </div>
 
       <div className="p-6 space-y-4">
+        <div>
+          <div className="text-[11px] font-bold tracking-[.06em] uppercase text-ink-3-light dark:text-ink-3-dark mb-2">
+            Время урока (только на эту дату)
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text" inputMode="numeric" value={editTimeStart}
+              onChange={e => setEditTimeStart(e.target.value)}
+              placeholder="8:10"
+              className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark"
+            />
+            <span className="text-ink-3-light dark:text-ink-3-dark text-[13px]">-</span>
+            <input
+              type="text" inputMode="numeric" value={editTimeEnd}
+              onChange={e => setEditTimeEnd(e.target.value)}
+              placeholder="8:50"
+              className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark"
+            />
+          </div>
+          <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark mt-1.5">
+            По умолчанию - из «Стандартного расписания». Изменение здесь применится только к этому дню.
+          </div>
+        </div>
+
         {editGroups.map((g, i) => (
           <div key={i} className="space-y-2">
             <div className="flex items-center justify-between">
@@ -735,54 +779,3 @@ function NumberActions({ number, date, classes, distantSet, onClose, onSaved }: 
   );
 }
 
-function BellsModal({ day, initial, onClose }: {
-  day: string; initial: Array<{ number: number; timeStart: string; timeEnd: string }>; onClose: () => void;
-}) {
-  const [rows, setRows] = useState(() => {
-    const map = new Map<number, { timeStart: string; timeEnd: string }>();
-    for (const r of initial) map.set(r.number, { timeStart: r.timeStart, timeEnd: r.timeEnd });
-    const upTo = Math.max(8, ...initial.map(r => r.number));
-    return Array.from({ length: upTo }, (_, i) => {
-      const n = i + 1;
-      return { number: n, ...(map.get(n) ?? { timeStart: '', timeEnd: '' }) };
-    });
-  });
-  const [busy, setBusy] = useState(false);
-  const save = async () => {
-    setBusy(true);
-    try {
-      for (const r of rows) if (r.timeStart && r.timeEnd) await adminApi.saveTimeSlot({ day, number: r.number, timeStart: r.timeStart, timeEnd: r.timeEnd });
-      onClose();
-    } finally { setBusy(false); }
-  };
-  const applyDefaults = async () => {
-    setBusy(true);
-    try { await adminApi.resetTimeSlots(day); onClose(); } finally { setBusy(false); }
-  };
-  return (
-    <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center sm:p-4" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-bg-light dark:bg-bg-dark w-full max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-7 max-h-[92vh] overflow-y-auto">
-        <div className="sm:hidden pb-3 flex justify-center -mt-1"><div className="w-10 h-1 rounded-full bg-line-light dark:bg-line-dark" /></div>
-        <h2 className="font-serif text-[22px] sm:text-[26px] -tracking-[.01em] font-normal">Звонки на {day.toLowerCase()}</h2>
-        <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] mt-1 mb-4">Время сразу применится к урокам этого дня недели во всех неделях.</p>
-        <div className="space-y-2 mb-5">
-          {rows.map((r, i) => (
-            <div key={r.number} className="flex items-center gap-1.5 sm:gap-2">
-              <div className="w-6 sm:w-7 shrink-0 font-serif text-[16px] sm:text-[18px] font-medium text-ink-2-light dark:text-ink-2-dark tabular-nums text-center">{r.number}</div>
-              <input type="text" value={r.timeStart} onChange={e => setRows(rs => rs.map((x, idx) => idx === i ? { ...x, timeStart: e.target.value } : x))}
-                placeholder="8:10" inputMode="numeric" className="flex-1 min-w-0 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark" />
-              <div className="text-ink-3-light dark:text-ink-3-dark shrink-0 text-[13px]">-</div>
-              <input type="text" value={r.timeEnd} onChange={e => setRows(rs => rs.map((x, idx) => idx === i ? { ...x, timeEnd: e.target.value } : x))}
-                placeholder="8:50" inputMode="numeric" className="flex-1 min-w-0 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark" />
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          <button onClick={applyDefaults} disabled={busy} className="col-span-2 sm:col-span-1 py-2.5 rounded-xl bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark text-[13px] font-semibold disabled:opacity-50">По умолчанию</button>
-          <button onClick={onClose} className="py-2.5 rounded-xl bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark text-[13px] font-semibold">Отмена</button>
-          <button onClick={save} disabled={busy} className="py-2.5 rounded-xl bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark text-[13px] font-semibold disabled:opacity-50">{busy ? 'Сохраняем…' : 'Сохранить'}</button>
-        </div>
-      </div>
-    </div>
-  );
-}

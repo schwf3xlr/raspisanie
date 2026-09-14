@@ -20,7 +20,6 @@ interface Props {
   onSetMonday: (d: Date) => void;
   onSetDate: (iso: string) => void;
   onRefresh: () => Promise<void>;
-  onOpenBells: () => void;
   onOpenWholeSchool: () => void;
   onPublish: () => void | Promise<void>;
   onUnpublish: () => Promise<void>;
@@ -36,41 +35,70 @@ export default function AdminScheduleMobile(p: Props) {
 
   const setClass = (c: string) => setActiveClass(c);
 
-  // Конфликты: (teacherId, number) → список классов, где этот учитель занят.
+  // Конфликты: teacherId и roomId → список классов, где ресурс занят в этом номере урока.
   const conflictInfo = useMemo(() => {
-    const byLessonTeacher = new Map<string, string[]>(); // key: "number::teacherId" → classes
+    const byTeacher = new Map<string, string[]>(); // key: "number::teacherId" -> classes
+    const byRoom = new Map<string, string[]>();    // key: "number::roomId"    -> classes
     for (const n of p.numbers) {
       for (const c of p.data.classes) {
         const override = p.overrideByKey.get(`${c}::${n}`);
         const tpl = p.templateByKey.get(`${c}::${n}`);
         const src = override ?? tpl;
         if (!src || override?.isCancelled) continue;
-        const seen = new Set<number>();
+        const seenT = new Set<number>();
+        const seenR = new Set<number>();
         for (const g of src.groups) {
-          if (g.teacherId == null || seen.has(g.teacherId)) continue;
-          seen.add(g.teacherId);
-          const key = `${n}::${g.teacherId}`;
-          const arr = byLessonTeacher.get(key) ?? [];
-          arr.push(c);
-          byLessonTeacher.set(key, arr);
+          if (g.teacherId != null && !seenT.has(g.teacherId)) {
+            seenT.add(g.teacherId);
+            const key = `${n}::${g.teacherId}`;
+            const arr = byTeacher.get(key) ?? [];
+            arr.push(c);
+            byTeacher.set(key, arr);
+          }
+          if (g.roomId != null && !seenR.has(g.roomId)) {
+            seenR.add(g.roomId);
+            const key = `${n}::${g.roomId}`;
+            const arr = byRoom.get(key) ?? [];
+            arr.push(c);
+            byRoom.set(key, arr);
+          }
         }
       }
     }
-    const conflictCells = new Set<string>();
-    const conflicts: Array<{ number: number; teacher: string; classes: string[] }> = [];
-    for (const [key, classes] of byLessonTeacher) {
+    const conflictCells = new Map<string, 'teacher' | 'room' | 'both'>();
+    const teacherConflicts: Array<{ number: number; teacher: string; classes: string[] }> = [];
+    const roomConflicts: Array<{ number: number; room: string; classes: string[] }> = [];
+
+    const mark = (cell: string, kind: 'teacher' | 'room') => {
+      const cur = conflictCells.get(cell);
+      if (!cur) conflictCells.set(cell, kind);
+      else if (cur !== kind) conflictCells.set(cell, 'both');
+    };
+
+    for (const [key, classes] of byTeacher) {
       if (classes.length < 2) continue;
-      const [nStr, tIdStr] = key.split('::');
-      const teacher = p.dicts?.teachers.find(t => t.id === Number(tIdStr))?.shortName ?? 'Учитель';
-      conflicts.push({ number: Number(nStr), teacher, classes });
-      for (const c of classes) conflictCells.add(`${c}::${nStr}`);
+      const [nStr, idStr] = key.split('::');
+      const teacher = p.dicts?.teachers.find(t => t.id === Number(idStr))?.shortName ?? 'Учитель';
+      teacherConflicts.push({ number: Number(nStr), teacher, classes });
+      for (const c of classes) mark(`${c}::${nStr}`, 'teacher');
     }
-    return { conflictCells, conflicts };
+    for (const [key, classes] of byRoom) {
+      if (classes.length < 2) continue;
+      const [nStr, idStr] = key.split('::');
+      const room = p.dicts?.rooms.find(r => r.id === Number(idStr))?.name ?? 'Кабинет';
+      roomConflicts.push({ number: Number(nStr), room, classes });
+      for (const c of classes) mark(`${c}::${nStr}`, 'room');
+    }
+    return { conflictCells, teacherConflicts, roomConflicts };
   }, [p.numbers, p.data.classes, p.overrideByKey, p.templateByKey, p.dicts]);
 
   const activeClassConflicts = useMemo(
-    () => conflictInfo.conflicts.filter(c => c.classes.includes(activeClass)),
-    [conflictInfo.conflicts, activeClass]
+    () => conflictInfo.teacherConflicts.filter(c => c.classes.includes(activeClass)),
+    [conflictInfo.teacherConflicts, activeClass]
+  );
+  const activeClassRoomConflicts = useMemo(
+    () => conflictInfo.roomConflicts.filter(c => c.classes.includes(activeClass)),
+    [conflictInfo.roomConflicts, activeClass]
   );
 
   const lessonsForClass = useMemo(() => {
@@ -82,7 +110,7 @@ export default function AdminScheduleMobile(p: Props) {
       fromOverride: boolean;
       isCancelled: boolean;
       isDistant: boolean;
-      isConflict: boolean;
+      conflict: 'teacher' | 'room' | 'both' | null;
     }> = [];
     for (const n of p.numbers) {
       const override = p.overrideByKey.get(`${activeClass}::${n}`);
@@ -98,7 +126,7 @@ export default function AdminScheduleMobile(p: Props) {
         fromOverride: !!override,
         isCancelled: !!override?.isCancelled,
         isDistant,
-        isConflict: conflictInfo.conflictCells.has(`${activeClass}::${n}`),
+        conflict: conflictInfo.conflictCells.get(`${activeClass}::${n}`) ?? null,
       });
     }
     return rows;
@@ -181,9 +209,6 @@ export default function AdminScheduleMobile(p: Props) {
             ].join(' ')}>
             {p.isWholeSchoolDistant ? 'Вся школа на дистанте' : 'Дистант всей школы'}
           </button>
-          <button onClick={p.onOpenBells} className="py-2 rounded-xl border border-line-light dark:border-line-dark text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark col-span-2">
-            Настроить звонки
-          </button>
         </div>
       </div>
 
@@ -204,7 +229,7 @@ export default function AdminScheduleMobile(p: Props) {
         </div>
       </div>
 
-      {/* Conflict banner */}
+      {/* Conflict banners */}
       {activeClassConflicts.length > 0 && (
         <div className="mx-4 mt-4 bg-red-50 dark:bg-red-950/40 border border-red-300/60 dark:border-red-900/60 rounded-2xl p-3.5">
           <div className="flex items-center gap-2 text-red-700 dark:text-red-400 font-semibold text-[13px] mb-1.5">
@@ -220,6 +245,21 @@ export default function AdminScheduleMobile(p: Props) {
           </ul>
         </div>
       )}
+      {activeClassRoomConflicts.length > 0 && (
+        <div className="mx-4 mt-3 bg-orange-50 dark:bg-orange-950/30 border border-orange-300/60 dark:border-orange-900/60 rounded-2xl p-3.5">
+          <div className="flex items-center gap-2 text-orange-700 dark:text-orange-400 font-semibold text-[13px] mb-1.5">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 20V9"/></svg>
+            Конфликт кабинета
+          </div>
+          <ul className="text-[12.5px] text-orange-800 dark:text-orange-300 space-y-1">
+            {activeClassRoomConflicts.map((c, i) => (
+              <li key={i}>
+                <b>{c.number}-й урок:</b> кабинет {c.room} занят в классах {c.classes.join(', ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Lessons list */}
       <div className="px-4 py-4 pb-24 space-y-2">
@@ -227,13 +267,15 @@ export default function AdminScheduleMobile(p: Props) {
           <button key={l.number} onClick={() => setEditing({ number: l.number })}
             className={[
               'w-full text-left rounded-2xl border p-3 flex items-stretch gap-3 transition-colors relative',
-              l.isConflict
+              l.conflict === 'teacher' || l.conflict === 'both'
                 ? 'bg-red-50 dark:bg-red-950/30 border-red-400/70 dark:border-red-800/70 ring-2 ring-red-300/40 dark:ring-red-900/40'
-                : l.isDistant
-                  ? 'bg-distant-soft dark:bg-distant-soft-dark border-distant/20 dark:border-distant-dark/25'
-                  : l.fromOverride
-                    ? 'bg-accent-soft/50 dark:bg-accent-soft-dark/50 border-accent/25 dark:border-accent-dark/30'
-                    : 'bg-panel-light dark:bg-panel-dark border-line-light dark:border-line-dark',
+                : l.conflict === 'room'
+                  ? 'bg-orange-50 dark:bg-orange-950/30 border-orange-400/70 dark:border-orange-800/70 ring-2 ring-orange-300/40 dark:ring-orange-900/40'
+                  : l.isDistant
+                    ? 'bg-distant-soft dark:bg-distant-soft-dark border-distant/20 dark:border-distant-dark/25'
+                    : l.fromOverride
+                      ? 'bg-accent-soft/50 dark:bg-accent-soft-dark/50 border-accent/25 dark:border-accent-dark/30'
+                      : 'bg-panel-light dark:bg-panel-dark border-line-light dark:border-line-dark',
             ].join(' ')}>
             <div className="w-11 shrink-0 flex flex-col items-center justify-center text-center border-r border-line-light dark:border-line-dark pr-3">
               <div className="font-serif text-[22px] font-medium leading-none tabular-nums">{l.number}</div>
@@ -252,9 +294,10 @@ export default function AdminScheduleMobile(p: Props) {
                   <div key={i} className={i > 0 ? 'mt-1.5 pt-1.5 border-t border-dashed border-line-light dark:border-line-dark' : ''}>
                     <div className="text-[14.5px] font-semibold leading-tight flex items-center gap-1.5">
                       <span className="min-w-0 flex-1 truncate">{lookupSubject(p.dicts, g.subjectId)}</span>
-                      {l.isConflict && i === 0 && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/60 px-1 py-0.5 rounded">Конфл.</span>}
-                      {l.isDistant && i === 0 && !l.isConflict && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-distant dark:text-distant-dark bg-distant/10 dark:bg-distant-dark/20 px-1 py-0.5 rounded">Дист</span>}
-                      {l.fromOverride && !l.isDistant && !l.isConflict && i === 0 && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-accent dark:text-accent-dark bg-accent/10 dark:bg-accent-dark/20 px-1 py-0.5 rounded">Замена</span>}
+                      {(l.conflict === 'teacher' || l.conflict === 'both') && i === 0 && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/60 px-1 py-0.5 rounded">Учит.</span>}
+                      {l.conflict === 'room' && i === 0 && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-orange-700 dark:text-orange-400 bg-orange-100 dark:bg-orange-950/60 px-1 py-0.5 rounded">Каб.</span>}
+                      {l.isDistant && i === 0 && !l.conflict && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-distant dark:text-distant-dark bg-distant/10 dark:bg-distant-dark/20 px-1 py-0.5 rounded">Дист</span>}
+                      {l.fromOverride && !l.isDistant && !l.conflict && i === 0 && <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-accent dark:text-accent-dark bg-accent/10 dark:bg-accent-dark/20 px-1 py-0.5 rounded">Замена</span>}
                     </div>
                     <div className="text-[12px] text-ink-2-light dark:text-ink-2-dark leading-tight mt-0.5">
                       {lookupTeacher(p.dicts, g.teacherId)}

@@ -104,12 +104,26 @@ model PublishedDay {
   publishedAt DateTime @default(now())
 }
 
-// ---------- админ-сессии ----------
+// ---------- админы и сессии ----------
+
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  login        String   @unique
+  passwordHash String
+  role         String   // 'school' | 'tech'
+  displayName  String?
+  createdAt    DateTime @default(now())
+  sessions     AdminSession[]
+}
 
 model AdminSession {
   id        String   @id
   createdAt DateTime @default(now())
   expiresAt DateTime
+  user      AdminUser? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    Int?
+
+  @@index([userId])
 }
 
 // ---------- FCM токены устройств ----------

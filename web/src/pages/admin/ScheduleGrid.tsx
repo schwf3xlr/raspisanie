@@ -1,11 +1,14 @@
 import { forwardRef, useEffect } from 'react';
 import type { AdminGroup, AdminDictionaries } from '../../lib/admin-api';
 
+export type ConflictKind = 'teacher' | 'room' | 'both';
+
 export interface GridCellData {
   fromOverride?: boolean;
   isCancelled?: boolean;
   isDistant?: boolean;
-  isConflict?: boolean;
+  /** Заполнено, если ячейка конфликтует с другой на том же уроке. */
+  conflict?: ConflictKind;
   groups: AdminGroup[];
 }
 
@@ -74,11 +77,18 @@ export default function ScheduleGrid({
   return (
     <div className={`flex-1 overflow-auto ${bg}`}>
       <style>{`
-        @keyframes conflictPulse {
+        @keyframes conflictPulseTeacher {
           0%, 100% { background: rgba(239, 68, 68, 0.08); box-shadow: inset 0 0 0 2px rgba(239, 68, 68, 0.55); }
           50%      { background: rgba(239, 68, 68, 0.22); box-shadow: inset 0 0 0 2px rgba(239, 68, 68, 1); }
         }
-        [data-conflict="true"] { animation: conflictPulse 1.1s ease-in-out infinite; }
+        @keyframes conflictPulseRoom {
+          0%, 100% { background: rgba(249, 115, 22, 0.08); box-shadow: inset 0 0 0 2px rgba(249, 115, 22, 0.55); }
+          50%      { background: rgba(249, 115, 22, 0.22); box-shadow: inset 0 0 0 2px rgba(249, 115, 22, 1); }
+        }
+        [data-conflict="teacher"] { animation: conflictPulseTeacher 1.1s ease-in-out infinite; }
+        [data-conflict="room"]    { animation: conflictPulseRoom    1.1s ease-in-out infinite; }
+        /* Оба одновременно - оставляем красный как более критичный. */
+        [data-conflict="both"]    { animation: conflictPulseTeacher 1.1s ease-in-out infinite; }
         .sched-table { border-collapse: separate; border-spacing: 0; }
         .sched-table th, .sched-table td { box-sizing: border-box; }
       `}</style>
@@ -200,7 +210,7 @@ function Cell({ dataKey, cell, active, isAnchor, dicts, subj, teacher, room, onC
   const cancelled = cell?.isCancelled;
   const distant = cell?.isDistant;
   const changed = cell?.fromOverride;
-  const conflict = cell?.isConflict;
+  const conflict = cell?.conflict; // 'teacher' | 'room' | 'both' | undefined
   const singleGroup = cell?.groups.length === 1;
 
   const ringCls = isAnchor
@@ -221,7 +231,13 @@ function Cell({ dataKey, cell, active, isAnchor, dicts, subj, teacher, room, onC
     <td
       onClick={onClick}
       data-cell={dataKey}
-      data-conflict={conflict ? 'true' : undefined}
+      data-conflict={conflict}
+      title={
+        conflict === 'teacher' ? 'У учителя одновременно несколько классов'
+        : conflict === 'room'   ? 'В одном кабинете одновременно несколько классов'
+        : conflict === 'both'   ? 'Учитель и кабинет заняты дважды'
+        : undefined
+      }
       style={{ height: CELL_MIN_H }}
       className={[
         'min-w-[160px] p-0 border-b border-r border-line-light dark:border-line-dark cursor-pointer transition-colors group relative select-none',

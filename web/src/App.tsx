@@ -9,8 +9,10 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminSchedule from './pages/admin/AdminSchedule';
 import AdminTemplate from './pages/admin/AdminTemplate';
 import AdminDictionaries from './pages/admin/AdminDictionaries';
+import AdminUsers from './pages/admin/AdminUsers';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import FullGridPage from './pages/FullGridPage';
 import DialogRoot from './components/DialogRoot';
 import CookieBanner from './components/CookieBanner';
 import { useTheme } from './lib/hooks';
@@ -48,6 +50,7 @@ export default function App() {
         {/* В Android-приложении лендинг не показываем - сразу ведём на расписание. */}
         <Route path="/" element={Capacitor.isNativePlatform() ? <Navigate to="/app" replace /> : <Landing />} />
         <Route path="/app" element={<ScheduleApp />} />
+        <Route path="/all" element={<FullGridPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
@@ -56,6 +59,7 @@ export default function App() {
           <Route path="schedule" element={<AdminSchedule />} />
           <Route path="template" element={<AdminTemplate />} />
           <Route path="dictionaries" element={<AdminDictionaries />} />
+          <Route path="users" element={<AdminUsers />} />
         </Route>
         <Route path="*" element={<Landing />} />
       </Routes>
