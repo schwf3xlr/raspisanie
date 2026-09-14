@@ -10,12 +10,14 @@ import {
 } from './auth.js';
 import {
   dayNameFromDate,
+  formatDateRu,
   fromISODate,
   toDbDate,
   toISODate,
   workdaysOfWeek,
 } from './date-utils.js';
 import type { GroupRef } from './types.js';
+import { sendPush, pushConfigured, type PushResult } from './push.js';
 
 interface LessonUpsertBody {
   className: string;
@@ -428,7 +430,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
   );
 
   // ---------- publication ----------
-  app.post<{ Body: { date: string } }>(
+  app.post<{
+    Body: {
+      date: string;
+      notify?: boolean;
+      notifyClasses?: string[]; // если пусто — рассылка всем зарегистрированным
+      notifyText?: string;      // кастомный текст, иначе — авто по дате
+    };
+  }>(
     '/api/admin/publish/day',
     { preHandler: (req, reply) => requireAdmin(req, reply) },
     async (req) => {
@@ -438,7 +447,29 @@ export async function registerAdminRoutes(app: FastifyInstance) {
         create: { date: dbDate },
         update: { publishedAt: new Date() },
       });
-      return { ok: true };
+
+      let push: PushResult | null = null;
+      if (req.body.notify && pushConfigured) {
+        const dateLabel = formatDateRu(req.body.date);
+        const title = 'Расписание опубликовано';
+        const body = req.body.notifyText || `Расписание на ${dateLabel} доступно в приложении`;
+        const targets = req.body.notifyClasses && req.body.notifyClasses.length > 0
+          ? req.body.notifyClasses
+          : [null]; // null → broadcast
+
+        push = { attempted: 0, succeeded: 0, cleaned: 0 };
+        for (const cls of targets) {
+          const r = await sendPush(
+            cls ? { className: cls } : { broadcast: true },
+            { title, body, data: { date: req.body.date, className: cls ?? '' } },
+          );
+          push.attempted += r.attempted;
+          push.succeeded += r.succeeded;
+          push.cleaned += r.cleaned;
+        }
+      }
+
+      return { ok: true, push };
     }
   );
 
@@ -452,7 +483,14 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
   );
 
-  app.post<{ Body: { weekStart: string } }>(
+  app.post<{
+    Body: {
+      weekStart: string;
+      notify?: boolean;
+      notifyClasses?: string[];
+      notifyText?: string;
+    };
+  }>(
     '/api/admin/publish/week',
     { preHandler: (req, reply) => requireAdmin(req, reply) },
     async (req) => {
@@ -465,8 +503,81 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           update: { publishedAt: new Date() },
         });
       }
-      return { ok: true };
+
+      let push: PushResult | null = null;
+      if (req.body.notify && pushConfigured) {
+        const title = 'Расписание опубликовано';
+        const body = req.body.notifyText || `Расписание на неделю с ${formatDateRu(req.body.weekStart)} доступно`;
+        const targets = req.body.notifyClasses && req.body.notifyClasses.length > 0
+          ? req.body.notifyClasses
+          : [null];
+
+        push = { attempted: 0, succeeded: 0, cleaned: 0 };
+        for (const cls of targets) {
+          const r = await sendPush(
+            cls ? { className: cls } : { broadcast: true },
+            { title, body, data: { weekStart: req.body.weekStart, className: cls ?? '' } },
+          );
+          push.attempted += r.attempted;
+          push.succeeded += r.succeeded;
+          push.cleaned += r.cleaned;
+        }
+      }
+
+      return { ok: true, push };
     }
+  );
+
+  // Ручная рассылка — для «6 урок отменён» и подобного.
+  app.post<{
+    Body: {
+      title?: string;
+      body: string;
+      classes?: string[]; // пусто → всем
+    };
+  }>(
+    '/api/admin/push/broadcast',
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
+    async (req, reply) => {
+      const { title, body, classes } = req.body ?? {};
+      if (!body || typeof body !== 'string') return reply.code(400).send({ error: 'body обязателен' });
+      if (!pushConfigured) return reply.code(503).send({ error: 'FCM не сконфигурирован', hint: 'см. PUSH.md' });
+
+      const targets = classes && classes.length > 0 ? classes : [null];
+      let total: PushResult = { attempted: 0, succeeded: 0, cleaned: 0 };
+      for (const cls of targets) {
+        const r = await sendPush(
+          cls ? { className: cls } : { broadcast: true },
+          { title: title || 'Уведомление', body, data: { className: cls ?? '' } },
+        );
+        total = {
+          attempted: total.attempted + r.attempted,
+          succeeded: total.succeeded + r.succeeded,
+          cleaned: total.cleaned + r.cleaned,
+        };
+      }
+      return { ok: true, push: total };
+    },
+  );
+
+  app.get(
+    '/api/admin/push/status',
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
+    async () => {
+      const [total, byClass] = await Promise.all([
+        db.deviceToken.count(),
+        db.deviceToken.groupBy({
+          by: ['className'],
+          _count: { _all: true },
+          orderBy: { className: 'asc' },
+        }),
+      ]);
+      return {
+        configured: pushConfigured,
+        total,
+        byClass: byClass.map(r => ({ className: r.className, count: r._count._all })),
+      };
+    },
   );
 
   // ---------- звонки ----------

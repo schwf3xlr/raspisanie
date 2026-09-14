@@ -183,7 +183,12 @@ ADMIN_LOGIN=admin
 ADMIN_PASSWORD=придумай-надёжный-пароль-для-админа
 SESSION_SECRET=длинная-случайная-строка-минимум-32-символа
 NODE_ENV=production
+
+# Push (опционально; без него бэкенд просто не шлёт уведомления)
+# FCM_SERVICE_ACCOUNT_FILE=/opt/raspisanie/fcm-service-account.json
 ```
+
+Про push и создание Firebase-проекта — см. [PUSH.md](PUSH.md).
 
 Сгенерировать случайный секрет:
 ```bash

@@ -33,6 +33,14 @@ export interface AdminGroup {
   roomId: number | null;
 }
 
+export interface PushCounters { attempted: number; succeeded: number; cleaned: number }
+export interface PublishResponse { ok: true; push: PushCounters | null }
+export interface PushStatus {
+  configured: boolean;
+  total: number;
+  byClass: Array<{ className: string | null; count: number }>;
+}
+
 export interface AdminTemplateLesson {
   id: number;
   className: string;
@@ -158,9 +166,16 @@ export const adminApi = {
     req<{ ok: true }>('/distant/all', { method: 'POST', body: JSON.stringify(payload) }),
 
   // publication
-  publishDay: (date: string) => req<{ ok: true }>('/publish/day', { method: 'POST', body: JSON.stringify({ date }) }),
+  publishDay: (payload: { date: string; notify?: boolean; notifyClasses?: string[]; notifyText?: string }) =>
+    req<PublishResponse>('/publish/day', { method: 'POST', body: JSON.stringify(payload) }),
   unpublishDay: (date: string) => req<{ ok: true }>('/publish/day', { method: 'DELETE', body: JSON.stringify({ date }) }),
-  publishWeek: (weekStart: string) => req<{ ok: true }>('/publish/week', { method: 'POST', body: JSON.stringify({ weekStart }) }),
+  publishWeek: (payload: { weekStart: string; notify?: boolean; notifyClasses?: string[]; notifyText?: string }) =>
+    req<PublishResponse>('/publish/week', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // push
+  pushStatus: () => req<PushStatus>('/push/status'),
+  pushBroadcast: (payload: { title?: string; body: string; classes?: string[] }) =>
+    req<{ ok: true; push: PushCounters }>('/push/broadcast', { method: 'POST', body: JSON.stringify(payload) }),
 
   // timeslots
   timeSlots: (day: string) => req<Array<{ id: number; day: string; number: number; timeStart: string; timeEnd: string }>>(`/timeslots?day=${encodeURIComponent(day)}`),

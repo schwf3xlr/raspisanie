@@ -111,3 +111,18 @@ model AdminSession {
   createdAt DateTime @default(now())
   expiresAt DateTime
 }
+
+// ---------- FCM токены устройств ----------
+
+model DeviceToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  platform   String   @default("android")
+  className  String?  // подписан на расписание этого класса
+  teacherId  Int?     // ИЛИ на расписание учителя
+  createdAt  DateTime @default(now())
+  lastSeen   DateTime @default(now()) @updatedAt
+
+  @@index([className])
+  @@index([teacherId])
+}

@@ -14,6 +14,7 @@ import {
   toISODate,
 } from '../lib/time';
 import { useLocalStorage, useTheme, useTick } from '../lib/hooks';
+import { syncViewer } from '../lib/push';
 import LessonRow from '../components/LessonRow';
 import ClassPicker from '../components/ClassPicker';
 import TeacherPicker from '../components/TeacherPicker';
@@ -55,6 +56,10 @@ export default function ScheduleApp() {
   const [themeMode, setThemeMode] = useTheme();
 
   useTick(60_000);
+
+  useEffect(() => {
+    void syncViewer(viewer);
+  }, [viewer]);
 
   useEffect(() => {
     if (viewer) return;

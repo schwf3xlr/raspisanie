@@ -66,3 +66,15 @@ export function dbDateToISO(d: Date): string {
   const day = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
 }
+
+const RU_MONTHS = [
+  'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+  'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря',
+];
+
+// ISO YYYY-MM-DD → «15 сентября»
+export function formatDateRu(iso: string): string {
+  const [_, m, d] = iso.split('-').map(Number);
+  const month = RU_MONTHS[(m ?? 1) - 1];
+  return `${d} ${month}`;
+}

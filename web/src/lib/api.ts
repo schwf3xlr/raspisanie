@@ -24,4 +24,17 @@ export const api = {
     json<Week>(`/week/${encodeURIComponent(className)}${dateIso ? `?date=${dateIso}` : ''}`),
   weekTeacher: (teacherId: number, dateIso?: string) =>
     json<Week>(`/week-teacher/${teacherId}${dateIso ? `?date=${dateIso}` : ''}`),
+
+  pushRegister: (token: string, opts: { platform?: string; className?: string | null; teacherId?: number | null }) =>
+    json<{ ok: boolean }>('/push/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, ...opts }),
+    }),
+  pushUnregister: (token: string) =>
+    json<{ ok: boolean }>('/push/unregister', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }),
 };

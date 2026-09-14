@@ -22,9 +22,9 @@ interface Props {
   onRefresh: () => Promise<void>;
   onOpenBells: () => void;
   onOpenWholeSchool: () => void;
-  onPublish: () => Promise<void>;
+  onPublish: () => void | Promise<void>;
   onUnpublish: () => Promise<void>;
-  onPublishWeek: () => Promise<void>;
+  onPublishWeek: () => void | Promise<void>;
 }
 
 export default function AdminScheduleMobile(p: Props) {

@@ -42,6 +42,11 @@ web/android/capacitor-cordova-android-plugins/
 *.jks
 web/android/key.properties
 
+# Firebase Cloud Messaging: сервисный аккаунт — секрет, google-services.json — публичный, но кладём в env.
+api/fcm-service-account.json
+**/fcm-service-account*.json
+web/android/app/google-services.json
+
 # Сборочные артефакты APK и релизный манифест
 latest.json
 raspisanie-*.apk

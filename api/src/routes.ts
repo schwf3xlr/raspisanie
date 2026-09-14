@@ -52,6 +52,50 @@ export async function registerRoutes(app: FastifyInstance) {
   app.get('/api/health', async () => ({ ok: true }));
   app.get('/api/school', async () => SCHOOL);
 
+  // Регистрация FCM-токена устройства. Идемпотентно — при повторе просто обновляется lastSeen/подписка.
+  app.post<{
+    Body: {
+      token?: string;
+      platform?: string;
+      className?: string | null;
+      teacherId?: number | null;
+    };
+  }>(
+    '/api/push/register',
+    async (req, reply) => {
+      const { token, platform, className, teacherId } = req.body ?? {};
+      if (!token || typeof token !== 'string' || token.length < 20) {
+        return reply.code(400).send({ error: 'bad token' });
+      }
+      const cls = typeof className === 'string' && className ? className : null;
+      const tid = typeof teacherId === 'number' && Number.isFinite(teacherId) ? teacherId : null;
+
+      await db.deviceToken.upsert({
+        where: { token },
+        create: {
+          token,
+          platform: platform ?? 'android',
+          className: cls,
+          teacherId: tid,
+        },
+        update: {
+          className: cls,
+          teacherId: tid,
+          platform: platform ?? undefined,
+          // lastSeen обновляется автоматически (@updatedAt)
+        },
+      });
+      return { ok: true };
+    },
+  );
+
+  app.post<{ Body: { token: string } }>('/api/push/unregister', async (req, reply) => {
+    const { token } = req.body ?? { token: '' };
+    if (!token) return reply.code(400).send({ error: 'bad token' });
+    await db.deviceToken.deleteMany({ where: { token } });
+    return { ok: true };
+  });
+
   app.get('/api/classes', async () => {
     const rows = await db.class.findMany({ orderBy: { sortKey: 'asc' } });
     return { classes: rows.map(r => r.name) };

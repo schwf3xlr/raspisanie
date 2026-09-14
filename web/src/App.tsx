@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import Landing from './pages/Landing';
 import ScheduleApp from './pages/ScheduleApp';
@@ -12,17 +12,32 @@ import AdminDictionaries from './pages/admin/AdminDictionaries';
 import DialogRoot from './components/DialogRoot';
 import { useTheme } from './lib/hooks';
 import { checkForUpdate } from './lib/update-check';
+import { initPush, isPushSupported } from './lib/push';
+import type { SavedViewer } from './lib/types';
 
 export default function App() {
   useTheme();
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.title = 'Расписание · СОШ №44';
     // Проверка обновлений — только в Android-приложении, в браузере no-op.
     // Небольшая задержка, чтобы UI успел появиться первым.
     const t = setTimeout(() => { void checkForUpdate(); }, 1500);
+
+    if (isPushSupported()) {
+      const viewer = readViewerFromStorage();
+      void initPush({
+        viewer,
+        onNotificationTap: () => {
+          // По клику на уведомление — открываем расписание.
+          navigate('/app');
+        },
+      });
+    }
+
     return () => clearTimeout(t);
-  }, []);
+  }, [navigate]);
 
   return (
     <>
@@ -42,4 +57,13 @@ export default function App() {
       <DialogRoot />
     </>
   );
+}
+
+function readViewerFromStorage(): SavedViewer | null {
+  try {
+    const raw = localStorage.getItem('viewer');
+    return raw ? (JSON.parse(raw) as SavedViewer) : null;
+  } catch {
+    return null;
+  }
 }

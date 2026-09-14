@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { adminApi, type AdminDayResponse, type AdminDictionaries, type AdminGroup, type AdminOverride, type AdminTemplateLesson } from '../../lib/admin-api';
+import { adminApi, type AdminDayResponse, type AdminDictionaries, type AdminGroup, type AdminOverride, type AdminTemplateLesson, type PublishResponse } from '../../lib/admin-api';
 import { confirmDialog } from '../../lib/dialog';
 import {
   addDays, fmtDate, fmtWeekLabel, fromISODate, isSameDate, mondayOf, toISODate,
@@ -8,6 +8,7 @@ import { DAY_SHORT } from '../../lib/types';
 import ScheduleGrid, { type GridCellData, DictSelect } from './ScheduleGrid';
 import { useGridSelection } from './useGridSelection';
 import AdminScheduleMobile from './AdminScheduleMobile';
+import PublishSheet from '../../components/admin/PublishSheet';
 
 export default function AdminSchedule() {
   const [monday, setMonday] = useState<Date>(() => mondayOf(new Date()));
@@ -140,7 +141,11 @@ export default function AdminSchedule() {
     return first?.note ?? '';
   }, [data, isWholeSchoolDistant]);
 
-  const publishDay = async () => { await adminApi.publishDay(dateIso); refresh(); };
+  const [publishTarget, setPublishTarget] = useState<'day' | 'week' | null>(null);
+  const [publishToast, setPublishToast] = useState<string | null>(null);
+
+  const publishDay = () => setPublishTarget('day');
+  const publishWeek = () => setPublishTarget('week');
   const unpublishDay = async () => {
     const ok = await confirmDialog({
       title: 'Отозвать публикацию?',
@@ -150,7 +155,16 @@ export default function AdminSchedule() {
     if (!ok) return;
     await adminApi.unpublishDay(dateIso); refresh();
   };
-  const publishWeek = async () => { await adminApi.publishWeek(toISODate(monday)); refresh(); };
+
+  const onPublishDone = (res: PublishResponse) => {
+    refresh();
+    if (res.push) {
+      setPublishToast(`Опубликовано. Push-уведомление: ${res.push.succeeded} из ${res.push.attempted}${res.push.cleaned ? `, битых токенов удалено: ${res.push.cleaned}` : ''}`);
+    } else {
+      setPublishToast('Опубликовано.');
+    }
+    setTimeout(() => setPublishToast(null), 4500);
+  };
 
   const setDistantAllSchool = async (note: string) => {
     await adminApi.setDistantAllClasses({ date: dateIso, lessonNumber: null, note: note || null });
@@ -350,6 +364,31 @@ export default function AdminSchedule() {
           onDeactivate={async () => { await clearDistantAllSchool(); setWholeSchoolOpen(false); }}
           onClose={() => setWholeSchoolOpen(false)}
         />
+      )}
+
+      {publishTarget === 'day' && (
+        <PublishSheet
+          open
+          onClose={() => setPublishTarget(null)}
+          target={{ kind: 'day', date: dateIso, dateLabel: `${data.day}, ${fmtDate(fromISODate(dateIso))}` }}
+          classes={data.classes}
+          onDone={onPublishDone}
+        />
+      )}
+      {publishTarget === 'week' && (
+        <PublishSheet
+          open
+          onClose={() => setPublishTarget(null)}
+          target={{ kind: 'week', weekStart: toISODate(monday), weekLabel: fmtWeekLabel(monday) }}
+          classes={data.classes}
+          onDone={onPublishDone}
+        />
+      )}
+
+      {publishToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark px-4 py-2.5 rounded-full text-[13.5px] font-semibold shadow-2xl">
+          {publishToast}
+        </div>
       )}
     </div>
   );
