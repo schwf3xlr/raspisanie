@@ -36,8 +36,15 @@ web/android/app/src/main/assets/public/
 web/android/app/src/main/assets/capacitor.config.json
 web/android/app/src/main/assets/capacitor.plugins.json
 web/android/capacitor-cordova-android-plugins/
+
+# Секреты подписи APK — НИКОГДА в git!
 *.keystore
-!school-release.keystore.example
+*.jks
+web/android/key.properties
+
+# Сборочные артефакты APK и релизный манифест
+latest.json
+raspisanie-*.apk
 
 # Editor
 .vscode/
