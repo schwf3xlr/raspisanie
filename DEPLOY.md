@@ -185,7 +185,7 @@ SESSION_SECRET=длинная-случайная-строка-минимум-32-
 NODE_ENV=production
 
 # Push (опционально; без него бэкенд просто не шлёт уведомления)
-# FCM_SERVICE_ACCOUNT_FILE=/opt/raspisanie/fcm-service-account.json
+# FCM_SERVICE_ACCOUNT_FILE=/home/deploy/raspisanie/api/fcm-service-account.json
 ```
 
 Про push и создание Firebase-проекта — см. [PUSH.md](PUSH.md).

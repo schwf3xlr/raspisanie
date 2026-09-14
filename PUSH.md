@@ -28,26 +28,80 @@
 
 ## 3. Сервисный аккаунт для бэкенда
 
-Бэкенд отправляет пуши через FCM HTTP v1 API, ему нужен ключ **сервисного аккаунта** (это НЕ google-services.json).
+Бэкенд отправляет пуши через FCM HTTP v1 API — ему нужен ключ **сервисного аккаунта** (это НЕ `google-services.json`, а отдельный JSON).
 
-1. В Firebase Console: **⚙ Project settings → Service accounts**.
-2. Внизу: **Generate new private key**. Скачается JSON-файл вида `raspisanie-sh44-firebase-adminsdk-xxxxx.json`.
-3. Положить на сервер, например: `/opt/raspisanie/fcm-service-account.json`.
-4. В `.env` бэкенда добавить:
-   ```
-   FCM_SERVICE_ACCOUNT_FILE=/opt/raspisanie/fcm-service-account.json
-   ```
-   Либо (для CI/Docker без файла) — весь JSON одной строкой:
-   ```
-   FCM_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
-   ```
-5. Перезапустить `raspisanie-api.service`. В логах должно появиться:
-   ```
-   [push] FCM активен, project=raspisanie-sh44
-   ```
-   Если конфиг не найден — увидите `[push] FCM не сконфигурирован` и в админке галочка «Отправить push» будет неактивна.
+### 3.1 Скачать ключ
 
-> **Секрет!** Сервисный аккаунт даёт полный доступ к FCM проекта. НЕ коммитить, НЕ пересылать в мессенджерах, если утёк — сразу создать новый через **Service accounts → keys → Delete**.
+1. В Firebase Console: **⚙ Project settings → Service accounts** (вкладка).
+2. Внизу — **Generate new private key** → **Generate key**. Скачается JSON-файл вида `raspisanie-sh44-firebase-adminsdk-xxxxx-yyyyy.json`.
+3. У себя на Windows переименуй его в `fcm-service-account.json` (просто чтобы удобнее было в командах).
+
+> **Это секрет!** Тот, у кого есть этот файл, может отправлять пуши всем твоим устройствам. НЕ коммитить, НЕ отправлять в мессенджерах. Если утёк — Firebase Console → Service accounts → рядом с ключом «Delete», и сгенерировать новый.
+
+### 3.2 Загрузить на сервер
+
+Из PowerShell на Windows, из папки, куда сохранил ключ (например, `Downloads`):
+
+```bash
+scp fcm-service-account.json deploy@school.rskbot.ru:/home/deploy/raspisanie/api/fcm-service-account.json
+```
+
+Если у тебя `deploy`-пользователь заходит только по паролю — попросит его.
+
+### 3.3 Ограничить доступ к файлу
+
+Подключись к серверу:
+```bash
+ssh deploy@school.rskbot.ru
+```
+
+Проверь, что файл на месте, и закрой права:
+```bash
+ls -la ~/raspisanie/api/fcm-service-account.json
+chmod 600 ~/raspisanie/api/fcm-service-account.json
+```
+
+Теперь читать его сможет только пользователь `deploy` (под ним и запускается сервис).
+
+### 3.4 Прописать в `.env`
+
+```bash
+nano ~/raspisanie/api/.env
+```
+
+Добавить в конец файла (или раскомментировать, если строка уже есть):
+```env
+FCM_SERVICE_ACCOUNT_FILE=/home/deploy/raspisanie/api/fcm-service-account.json
+```
+
+Сохранить: `Ctrl+O`, `Enter`, `Ctrl+X`.
+
+> Файл в `.gitignore` — `git reset --hard origin/main` при следующем деплое его не тронет.
+
+### 3.5 Перезапустить бэкенд и убедиться
+
+```bash
+sudo systemctl restart raspisanie-api
+sudo journalctl -u raspisanie-api -n 30 --no-pager
+```
+
+Ищи строку:
+```
+[push] FCM активен, project=raspisanie-sh44
+```
+
+Если увидишь `[push] FCM не сконфигурирован` — значит `.env` не подхватился (перепроверь путь и имя переменной) или JSON битый.
+
+### 3.6 (Альтернатива) Через переменную вместо файла
+
+Если по какой-то причине не хочется класть файл на диск — можно передать весь JSON одной строкой:
+
+```bash
+# на сервере, в ~/raspisanie/api/.env
+FCM_SERVICE_ACCOUNT_JSON={"type":"service_account","project_id":"raspisanie-sh44","private_key":"-----BEGIN…","client_email":"…","..."}
+```
+
+Только следи, чтобы кавычки не сломались (у private_key внутри есть `\n` — они должны остаться экранированными). Файл проще, поэтому по умолчанию рекомендую `FCM_SERVICE_ACCOUNT_FILE`.
 
 ## 4. Собрать и залить APK
 
