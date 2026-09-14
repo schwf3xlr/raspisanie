@@ -241,6 +241,10 @@ export const adminApi = {
   clearOverride: (payload: { date: string; className: string; number: number }) =>
     req<{ ok: true }>('/override', { method: 'DELETE', body: JSON.stringify(payload) }),
 
+  // Массовое переопределение звонков на дату (все классы, но только для указанных номеров).
+  setDayBells: (payload: { date: string; rows: Array<{ number: number; timeStart: string; timeEnd: string }> }) =>
+    req<{ ok: true; updated: number }>('/day-bells', { method: 'PUT', body: JSON.stringify(payload) }),
+
   // distant
   setDistant: (payload: { date: string; className: string; lessonNumber: number | null; note?: string | null }) =>
     req<{ ok: true }>('/distant', { method: 'POST', body: JSON.stringify(payload) }),

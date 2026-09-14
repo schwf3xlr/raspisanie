@@ -132,8 +132,8 @@ export default function AdminLayout() {
         </div>
       )}
 
-      {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-60 shrink-0 border-r border-line-light dark:border-line-dark px-5 py-6 flex-col">
+      {/* Desktop sidebar - фиксирован на всю высоту экрана, скроллится независимо от контента */}
+      <aside className="hidden md:flex w-60 shrink-0 border-r border-line-light dark:border-line-dark px-5 py-6 flex-col sticky top-0 h-screen overflow-y-auto">
         <Link to="/" className="flex items-center gap-3 mb-8">
           <SchoolLogo size={36} />
           <div className="leading-[1.15]">
@@ -142,7 +142,7 @@ export default function AdminLayout() {
           </div>
         </Link>
         {nav}
-        <div className="mt-auto">{bottomActions}</div>
+        <div className="mt-auto pt-6">{bottomActions}</div>
       </aside>
 
       <main className="flex-1 min-w-0 md:overflow-x-auto">

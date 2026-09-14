@@ -9,6 +9,7 @@ import ScheduleGrid, { type GridCellData, DictSelect } from './ScheduleGrid';
 import { useGridSelection } from './useGridSelection';
 import AdminScheduleMobile from './AdminScheduleMobile';
 import PublishSheet from '../../components/admin/PublishSheet';
+import DayBellsModal from '../../components/admin/DayBellsModal';
 
 export default function AdminSchedule() {
   const [monday, setMonday] = useState<Date>(() => mondayOf(new Date()));
@@ -23,6 +24,7 @@ export default function AdminSchedule() {
   const [classPopover, setClassPopover] = useState<string | null>(null);
   const [numberPopover, setNumberPopover] = useState<number | null>(null);
   const [wholeSchoolOpen, setWholeSchoolOpen] = useState(false);
+  const [dayBellsOpen, setDayBellsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -204,6 +206,7 @@ export default function AdminSchedule() {
         onSetDate={iso => { setDateIso(iso); setClassPopover(null); setNumberPopover(null); }}
         onRefresh={refresh}
         onOpenWholeSchool={() => setWholeSchoolOpen(true)}
+        onOpenDayBells={() => setDayBellsOpen(true)}
         onPublish={publishDay}
         onUnpublish={unpublishDay}
         onPublishWeek={publishWeek}
@@ -241,6 +244,14 @@ export default function AdminSchedule() {
               {isWholeSchoolDistant && (
                 <span className="w-1.5 h-1.5 bg-distant dark:bg-distant-dark rounded-full animate-pulse ml-0.5" />
               )}
+            </button>
+            <button
+              onClick={() => setDayBellsOpen(true)}
+              className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark inline-flex items-center gap-1.5"
+              title="Изменить время звонков только на этот день"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+              Звонки на день
             </button>
           </div>
         </div>
@@ -351,6 +362,18 @@ export default function AdminSchedule() {
           onActivate={async note => { await setDistantAllSchool(note); setWholeSchoolOpen(false); }}
           onDeactivate={async () => { await clearDistantAllSchool(); setWholeSchoolOpen(false); }}
           onClose={() => setWholeSchoolOpen(false)}
+        />
+      )}
+
+      {dayBellsOpen && (
+        <DayBellsModal
+          date={dateIso}
+          dateLabel={`${data.day}, ${fmtDate(fromISODate(dateIso))}`}
+          timeSlots={data.timeSlots}
+          template={data.template}
+          overrides={data.overrides}
+          onClose={() => setDayBellsOpen(false)}
+          onSaved={() => { void refresh(); }}
         />
       )}
 
@@ -560,17 +583,13 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
   onClose: () => void; onSaved: () => void;
 }) {
   const [editGroups, setEditGroups] = useState<AdminGroup[]>(groups.length ? groups : [{ subjectId: 0, teacherId: null, roomId: null }]);
-  const [editTimeStart, setEditTimeStart] = useState(time.timeStart);
-  const [editTimeEnd, setEditTimeEnd] = useState(time.timeEnd);
   const [busy, setBusy] = useState(false);
   const [distantNote, setDistantNote] = useState('');
 
   useEffect(() => {
     setEditGroups(groups.length ? groups : [{ subjectId: 0, teacherId: null, roomId: null }]);
-    setEditTimeStart(time.timeStart);
-    setEditTimeEnd(time.timeEnd);
     setDistantNote('');
-  }, [date, className, number, groups, time.timeStart, time.timeEnd]);
+  }, [date, className, number, groups]);
 
   if (!dicts) return null;
   const subjOpts = dicts.subjects.map(s => ({ id: s.id, label: s.name }));
@@ -581,13 +600,7 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
     const clean = editGroups.filter(g => g.subjectId > 0);
     setBusy(true);
     try {
-      // Отправляем нестандартное время, только если оно отличается от шаблонного.
-      const ts = editTimeStart.trim();
-      const te = editTimeEnd.trim();
-      const timeOverride = (ts && te && (ts !== time.timeStart || te !== time.timeEnd))
-        ? { timeStart: ts, timeEnd: te }
-        : {};
-      await adminApi.saveOverride({ date, className, number, groups: clean, ...timeOverride });
+      await adminApi.saveOverride({ date, className, number, groups: clean });
       onSaved(); onClose();
     }
     finally { setBusy(false); }
@@ -627,30 +640,6 @@ function CellDrawer({ date, className, number, time, isOverride, isDistantLesson
       </div>
 
       <div className="p-6 space-y-4">
-        <div>
-          <div className="text-[11px] font-bold tracking-[.06em] uppercase text-ink-3-light dark:text-ink-3-dark mb-2">
-            Время урока (только на эту дату)
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="text" inputMode="numeric" value={editTimeStart}
-              onChange={e => setEditTimeStart(e.target.value)}
-              placeholder="8:10"
-              className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark"
-            />
-            <span className="text-ink-3-light dark:text-ink-3-dark text-[13px]">-</span>
-            <input
-              type="text" inputMode="numeric" value={editTimeEnd}
-              onChange={e => setEditTimeEnd(e.target.value)}
-              placeholder="8:50"
-              className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-lg px-2.5 py-2 text-[14px] tabular-nums text-center focus:outline-none focus:border-ink-light dark:focus:border-ink-dark"
-            />
-          </div>
-          <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark mt-1.5">
-            По умолчанию - из «Стандартного расписания». Изменение здесь применится только к этому дню.
-          </div>
-        </div>
-
         {editGroups.map((g, i) => (
           <div key={i} className="space-y-2">
             <div className="flex items-center justify-between">

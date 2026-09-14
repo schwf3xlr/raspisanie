@@ -60,6 +60,25 @@ export default function DialogRoot() {
             {opts.title}
           </h3>
         )}
+        {isConfirm && (opts as ConfirmOpts).banner && (() => {
+          const b = (opts as ConfirmOpts).banner!;
+          const critical = b.kind === 'critical';
+          return (
+            <div className={[
+              'mt-1 mb-3 flex items-start gap-2.5 rounded-xl px-3 py-2.5 border',
+              critical
+                ? 'bg-red-50 dark:bg-red-950/40 border-red-300/70 dark:border-red-900/60 text-red-700 dark:text-red-300'
+                : 'bg-accent-soft dark:bg-accent-soft-dark border-accent/25 dark:border-accent-dark/30 text-accent dark:text-accent-dark',
+            ].join(' ')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-px">
+                {critical
+                  ? <path d="M12 9v4M12 17h.01M4.9 20.5h14.2a2 2 0 001.75-2.98l-7.1-12.5a2 2 0 00-3.5 0L3.16 17.52A2 2 0 004.9 20.5z" />
+                  : <><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></>}
+              </svg>
+              <span className="text-[13px] font-semibold leading-tight">{b.text}</span>
+            </div>
+          );
+        })()}
         {(isConfirm || opts.message) && (
           <p className="text-ink-2-light dark:text-ink-2-dark text-[14.5px] leading-relaxed">
             {isConfirm ? opts.message : opts.message}
@@ -107,3 +126,4 @@ export default function DialogRoot() {
 }
 
 interface PromptOpts { placeholder?: string }
+interface ConfirmOpts { banner?: { kind: 'critical' | 'info'; text: string } }

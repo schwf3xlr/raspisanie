@@ -55,12 +55,13 @@ export async function checkForUpdate(opts: { silent?: boolean } = {}): Promise<U
     const changelog = m.changelog?.trim() || 'Появилась новая версия приложения.';
 
     const ok = await confirmDialog({
-      title: m.mandatory
-        ? `Обновление обязательно · ${m.versionName}`
-        : `Обновление · ${m.versionName}`,
+      title: `Обновление · ${m.versionName}`,
       message: changelog,
       confirmText: 'Обновить сейчас',
-      cancelText: m.mandatory ? 'Отмена' : 'Позже',
+      cancelText: 'Позже',
+      banner: m.mandatory
+        ? { kind: 'critical', text: 'Критически важное обновление' }
+        : undefined,
     });
 
     if (ok) {

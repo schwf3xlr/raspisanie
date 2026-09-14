@@ -317,11 +317,37 @@ export default function AdminApp() {
                 Показывается пользователю в диалоге обновления.
               </div>
             </label>
-            <label className="flex items-center gap-2 md:col-span-2 cursor-pointer select-none">
-              <input type="checkbox" checked={mMandatory} onChange={e => setMMandatory(e.target.checked)}
-                className="w-4 h-4 accent-accent" />
-              <span className="text-[13.5px]">Обязательное обновление (кнопка «Позже» исчезает)</span>
-            </label>
+            <div className="md:col-span-2 mt-1 rounded-2xl border border-line-light dark:border-line-dark bg-panel-light/40 dark:bg-panel-dark/40 px-4 py-3.5 flex items-start gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <div className="text-[14px] font-semibold">Критически важное обновление</div>
+                  {mMandatory && (
+                    <span className="inline-flex items-center gap-1 text-[10.5px] font-bold tracking-[.06em] uppercase text-red-700 dark:text-red-400 bg-red-100 dark:bg-red-950/60 px-1.5 py-0.5 rounded">
+                      Активно
+                    </span>
+                  )}
+                </div>
+                <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5 leading-relaxed">
+                  В диалоге обновления появится красная плашка «Критически важное обновление».
+                  Кнопка «Позже» останется - пользователь сам решает, когда установить.
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={mMandatory}
+                onClick={() => setMMandatory(v => !v)}
+                className={[
+                  'shrink-0 relative w-11 h-6 rounded-full transition-colors',
+                  mMandatory ? 'bg-red-500 dark:bg-red-600' : 'bg-line-light dark:bg-line-2-dark',
+                ].join(' ')}
+              >
+                <span className={[
+                  'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all',
+                  mMandatory ? 'left-[22px]' : 'left-0.5',
+                ].join(' ')} />
+              </button>
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mt-5">

@@ -4,6 +4,8 @@ export interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
+  /** Опциональная плашка над сообщением. Например «Критически важное обновление». */
+  banner?: { kind: 'critical' | 'info'; text: string };
 }
 
 export interface PromptOptions {

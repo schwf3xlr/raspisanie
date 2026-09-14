@@ -21,6 +21,7 @@ interface Props {
   onSetDate: (iso: string) => void;
   onRefresh: () => Promise<void>;
   onOpenWholeSchool: () => void;
+  onOpenDayBells: () => void;
   onPublish: () => void | Promise<void>;
   onUnpublish: () => Promise<void>;
   onPublishWeek: () => void | Promise<void>;
@@ -208,6 +209,10 @@ export default function AdminScheduleMobile(p: Props) {
                 : 'border-line-light dark:border-line-dark text-ink-2-light dark:text-ink-2-dark',
             ].join(' ')}>
             {p.isWholeSchoolDistant ? 'Вся школа на дистанте' : 'Дистант всей школы'}
+          </button>
+          <button onClick={p.onOpenDayBells}
+            className="col-span-2 py-2 rounded-xl border border-line-light dark:border-line-dark text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark">
+            Звонки на этот день
           </button>
         </div>
       </div>

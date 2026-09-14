@@ -479,6 +479,63 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
   );
 
+  // Переопределить время звонков на конкретную дату для всех классов.
+  // Для каждой пары (className, number) с непустым time - создаёт/обновляет override
+  // с текущими группами (шаблон или существующий override). Если time пустой -
+  // удаляет только timeStart/timeEnd-override, вернувшись к стандарту (но без потери групп).
+  app.put<{ Body: { date: string; rows: Array<{ number: number; timeStart: string; timeEnd: string }> } }>(
+    '/api/admin/day-bells',
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
+    async (req, reply) => {
+      const b = req.body;
+      if (!b?.date || !Array.isArray(b.rows)) return reply.code(400).send({ error: 'нужны date и rows' });
+      const dbDate = toDbDate(b.date);
+      const dayName = dayNameFromDate(fromISODate(b.date));
+      if (!dayName) return reply.code(400).send({ error: 'выходной' });
+
+      const [classes, templates, overrides, slots] = await Promise.all([
+        db.class.findMany({ orderBy: { sortKey: 'asc' } }),
+        db.lessonTemplate.findMany({ where: { day: dayName } }),
+        db.lessonOverride.findMany({ where: { date: dbDate } }),
+        db.timeSlot.findMany({ where: { day: dayName } }),
+      ]);
+      const slotByNum = new Map(slots.map(s => [s.number, s]));
+      const tplByKey = new Map(templates.map(t => [`${t.className}::${t.number}`, t]));
+      const ovByKey  = new Map(overrides.map(o => [`${o.className}::${o.number}`, o]));
+
+      let updated = 0;
+      for (const row of b.rows) {
+        const n = Number(row.number);
+        if (!Number.isFinite(n) || n <= 0) continue;
+        const ts = (row.timeStart ?? '').trim();
+        const te = (row.timeEnd ?? '').trim();
+        const slot = slotByNum.get(n);
+        // Что применяем: если оба поля непустые - это override.
+        // Если оба пустые - откатываем к стандарту (удаляем override только если он был чисто «времени-ради»).
+        const finalStart = ts || slot?.timeStart || '';
+        const finalEnd   = te || slot?.timeEnd   || '';
+
+        for (const c of classes) {
+          const key = `${c.name}::${n}`;
+          const ov = ovByKey.get(key);
+          const tpl = tplByKey.get(key);
+          // Нет ни шаблона, ни override для этого урока у класса - пропускаем.
+          if (!ov && !tpl) continue;
+          // Если урок был отменён (isCancelled) - сохраняем это, просто обновляем время.
+          const groups = ov ? parseGroups(ov.groups) : parseGroups(tpl!.groups);
+          const isCancelled = ov?.isCancelled ?? false;
+          await db.lessonOverride.upsert({
+            where: { date_className_number: { date: dbDate, className: c.name, number: n } },
+            create: { date: dbDate, className: c.name, number: n, timeStart: finalStart, timeEnd: finalEnd, groups: groups as unknown as object, isCancelled },
+            update: { timeStart: finalStart, timeEnd: finalEnd },
+          });
+          updated++;
+        }
+      }
+      return { ok: true, updated };
+    },
+  );
+
   // ---------- distant ----------
   app.post<{ Body: { date: string; className: string; lessonNumber: number | null; note?: string | null } }>(
     '/api/admin/distant',

@@ -210,12 +210,12 @@ export default function ScheduleApp() {
                   key={d.date}
                   onClick={() => setDateIso(d.date)}
                   className={[
-                    'flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl border transition-colors text-center min-w-0',
+                    'flex flex-col items-center justify-center gap-0.5 py-2 rounded-2xl border transition-all active:scale-[.97] text-center min-w-0',
                     on
-                      ? 'bg-ink-light text-bg-light border-ink-light dark:bg-ink-dark dark:text-bg-dark dark:border-ink-dark'
+                      ? 'bg-ink-light text-bg-light border-ink-light dark:bg-ink-dark dark:text-bg-dark dark:border-ink-dark shadow-sm'
                       : d.published
-                        ? 'bg-transparent border-transparent text-ink-2-light dark:text-ink-2-dark hover:bg-panel-light dark:hover:bg-panel-dark'
-                        : 'bg-transparent border-dashed border-line-light dark:border-line-dark text-ink-3-light dark:text-ink-3-dark',
+                        ? 'bg-panel-light/40 dark:bg-panel-dark/40 border-line-light dark:border-line-dark text-ink-2-light dark:text-ink-2-dark hover:border-ink-2-light dark:hover:border-ink-2-dark hover:bg-panel-light dark:hover:bg-panel-dark'
+                        : 'bg-transparent border-dashed border-line-light dark:border-line-dark text-ink-3-light dark:text-ink-3-dark hover:bg-panel-light/60 dark:hover:bg-panel-dark/60',
                   ].join(' ')}
                 >
                   <div className={['text-[10.5px] font-semibold tracking-[.06em] uppercase leading-none', on ? 'opacity-70' : 'opacity-60'].join(' ')}>
@@ -266,15 +266,40 @@ export default function ScheduleApp() {
                   {isTeacherMode ? 'В этот день у Вас нет уроков' : 'В этот день уроков нет'}
                 </div>
               ) : (
-                currentDay.lessons.map((l, idx) => (
-                  <LessonRow
-                    key={`${l.number}-${l.className ?? ''}-${idx}`}
-                    lesson={l}
-                    isToday={currentDay.isToday}
-                    distantDay={currentDay.isDistantAllDay}
-                    teacherMode={isTeacherMode}
-                  />
-                ))
+                <>
+                  {(() => {
+                    const first = currentDay.lessons[0];
+                    if (!first || first.number <= 1 || isTeacherMode) return null;
+                    const skipped = first.number - 1;
+                    const label = skipped === 1
+                      ? 'Первого урока нет'
+                      : `Первых ${skipped}-х уроков нет`;
+                    return (
+                      <div className="mb-3 bg-accent-soft dark:bg-accent-soft-dark border border-accent/20 dark:border-accent-dark/30 rounded-2xl px-4 py-3 flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-accent dark:bg-accent-dark text-white grid place-items-center shrink-0">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold text-accent dark:text-accent-dark text-[14px] leading-tight">
+                            {label}
+                          </div>
+                          <div className="text-[13px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed">
+                            К {first.number}-му уроку — приходите к <b className="tabular-nums text-ink-light dark:text-ink-dark">{first.timeStart}</b>.
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  {currentDay.lessons.map((l, idx) => (
+                    <LessonRow
+                      key={`${l.number}-${l.className ?? ''}-${idx}`}
+                      lesson={l}
+                      isToday={currentDay.isToday}
+                      distantDay={currentDay.isDistantAllDay}
+                      teacherMode={isTeacherMode}
+                    />
+                  ))}
+                </>
               )}
             </div>
           </>
