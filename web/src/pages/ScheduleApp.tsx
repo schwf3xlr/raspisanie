@@ -264,7 +264,7 @@ export default function ScheduleApp() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="font-semibold text-yellow-800 dark:text-yellow-200 text-[14px] leading-tight">
-                    Сегодня изменены звонки
+                    Изменены звонки
                   </div>
                   <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed tabular-nums">
                     {currentDay.bellChanges.map((b, i) => (

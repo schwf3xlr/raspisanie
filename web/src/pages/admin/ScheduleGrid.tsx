@@ -5,6 +5,8 @@ export type ConflictKind = 'teacher' | 'room' | 'both';
 
 export interface GridCellData {
   fromOverride?: boolean;
+  /** true - у урока сдвинуто время звонков на эту дату (без смены состава). */
+  timeOverridden?: boolean;
   isCancelled?: boolean;
   isDistant?: boolean;
   /** Заполнено, если ячейка конфликтует с другой на том же уроке. */
@@ -210,6 +212,7 @@ function Cell({ dataKey, cell, active, isAnchor, dicts, subj, teacher, room, onC
   const cancelled = cell?.isCancelled;
   const distant = cell?.isDistant;
   const changed = cell?.fromOverride;
+  const timeMoved = cell?.timeOverridden;
   const conflict = cell?.conflict; // 'teacher' | 'room' | 'both' | undefined
   const singleGroup = cell?.groups.length === 1;
 
@@ -225,7 +228,9 @@ function Cell({ dataKey, cell, active, isAnchor, dicts, subj, teacher, room, onC
       ? 'bg-distant-soft dark:bg-distant-soft-dark'
       : changed
         ? 'bg-accent-soft/50 dark:bg-accent-soft-dark/50'
-        : '';
+        : timeMoved
+          ? 'bg-yellow-100/70 dark:bg-yellow-900/25'
+          : '';
 
   return (
     <td

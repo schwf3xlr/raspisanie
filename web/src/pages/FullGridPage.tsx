@@ -133,7 +133,7 @@ export default function FullGridPage() {
           <div className="mt-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-300/60 dark:border-yellow-800/50 rounded-xl px-3 py-2 flex items-start gap-2.5">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-700 dark:text-yellow-300 shrink-0 mt-0.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
             <div className="text-[12.5px] text-ink-2-light dark:text-ink-2-dark tabular-nums leading-relaxed">
-              <b className="text-yellow-800 dark:text-yellow-200">Сегодня изменены звонки:</b>{' '}
+              <b className="text-yellow-800 dark:text-yellow-200">Изменены звонки:</b>{' '}
               {data.bellChanges.map((b, i) => (
                 <span key={b.number}>
                   {i > 0 && ' · '}

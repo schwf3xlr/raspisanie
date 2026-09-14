@@ -70,10 +70,27 @@ export default function AdminSchedule() {
   }, [data]);
   const numbers = useMemo(() => Array.from({ length: maxNumber }, (_, i) => i + 1), [maxNumber]);
 
-  const timeFor = useCallback((n: number): { timeStart: string; timeEnd: string } => {
+  // Стандартное время урока (из шаблона звонков этого дня недели).
+  const standardTimeFor = useCallback((n: number): { timeStart: string; timeEnd: string } => {
     const t = data?.timeSlots.find(x => x.number === n);
     return { timeStart: t?.timeStart ?? '', timeEnd: t?.timeEnd ?? '' };
   }, [data]);
+
+  // Фактическое время урока в этот день: если у любого класса есть override с нестандартным
+  // временем (звонки на этот день изменены через DayBellsModal - оно ставится всем классам
+  // одинаково), берём его. Иначе - стандартное.
+  const timeFor = useCallback((n: number): { timeStart: string; timeEnd: string } => {
+    const std = standardTimeFor(n);
+    if (!data) return std;
+    for (const o of data.overrides) {
+      if (o.number !== n) continue;
+      if (!o.timeStart || !o.timeEnd) continue;
+      if (o.timeStart !== std.timeStart || o.timeEnd !== std.timeEnd) {
+        return { timeStart: o.timeStart, timeEnd: o.timeEnd };
+      }
+    }
+    return std;
+  }, [data, standardTimeFor]);
 
   const effectiveGroups = useCallback((cls: string, n: number): AdminGroup[] => {
     const override = overrideByKey.get(`${cls}::${n}`);
@@ -90,14 +107,22 @@ export default function AdminSchedule() {
     const source = override ?? tpl;
     if (!source) return null;
     const isDistant = distantAllDay.has(cls) || distantByLesson.has(`${cls}::${n}`);
+    // «Замена» - только если реально изменились группы. Смена времени звонков - не замена.
+    const isRealReplacement = !!override && !sameGroupsAdmin(override.groups, tpl?.groups ?? []);
+    // Изменено ли время урока на эту дату (относительно стандарта звонков).
+    const std = standardTimeFor(n);
+    const timeOverridden = !!override
+      && !!override.timeStart && !!override.timeEnd
+      && (override.timeStart !== std.timeStart || override.timeEnd !== std.timeEnd);
     return {
       groups: source.groups,
-      fromOverride: !!override,
+      fromOverride: isRealReplacement,
+      timeOverridden,
       isCancelled: !!override?.isCancelled,
       isDistant,
       conflict: conflicts.get(`${cls}::${n}`),
     };
-  }, [templateByKey, overrideByKey, distantAllDay, distantByLesson, conflicts]);
+  }, [templateByKey, overrideByKey, distantAllDay, distantByLesson, conflicts, standardTimeFor]);
 
   const savePasted = useCallback(async (cls: string, n: number, groups: AdminGroup[]) => {
     await adminApi.saveOverride({ date: dateIso, className: cls, number: n, groups });
@@ -493,6 +518,19 @@ function plural(n: number, one: string, few: string, many: string): string {
   if (tens > 1 && tens < 5) return few;
   if (tens === 1) return one;
   return many;
+}
+
+// Строгое сравнение двух наборов групп по составу (subjectId + teacherId + roomId).
+function sameGroupsAdmin(a: AdminGroup[], b: AdminGroup[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const g1 = a[i]!;
+    const g2 = b[i]!;
+    if (g1.subjectId !== g2.subjectId) return false;
+    if ((g1.teacherId ?? null) !== (g2.teacherId ?? null)) return false;
+    if ((g1.roomId ?? null) !== (g2.roomId ?? null)) return false;
+  }
+  return true;
 }
 
 type ConflictMap = Map<string, 'teacher' | 'room' | 'both'>;
