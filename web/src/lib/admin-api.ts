@@ -293,7 +293,7 @@ export const adminApi = {
 
   // push
   pushStatus: () => req<PushStatus>('/push/status'),
-  pushBroadcast: (payload: { title?: string; body: string; classes?: string[] }) =>
+  pushBroadcast: (payload: { title?: string; body: string; classes?: string[]; kind?: 'manual' | 'changes' | 'distant' | 'publish' }) =>
     req<{ ok: true; push: PushCounters }>('/push/broadcast', { method: 'POST', body: JSON.stringify(payload) }),
 
   // timeslots

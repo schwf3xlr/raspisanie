@@ -442,9 +442,26 @@ function WholeSchoolModal({ date, classCount, active, initialNote, onActivate, o
   onClose: () => void;
 }) {
   const [note, setNote] = useState(initialNote);
+  const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  const activate = async () => { setBusy(true); try { await onActivate(note); } finally { setBusy(false); } };
+  const activate = async () => {
+    setBusy(true);
+    try {
+      await onActivate(note);
+      if (notify) {
+        const dateStr = new Date(date).toLocaleDateString('ru', { day: 'numeric', month: 'long' });
+        const body = note.trim()
+          ? `Дистант в школе ${dateStr}: ${note.trim()}`
+          : `Дистант в школе ${dateStr}. Все уроки проходят онлайн.`;
+        await adminApi.pushBroadcast({
+          title: 'Дистанционный день',
+          body,
+          kind: 'distant',
+        }).catch(err => console.warn('pushBroadcast failed:', err));
+      }
+    } finally { setBusy(false); }
+  };
   const deactivate = async () => {
     const ok = await confirmDialog({
       title: 'Снять дистант со всей школы?',
@@ -501,8 +518,22 @@ function WholeSchoolModal({ date, classCount, active, initialNote, onActivate, o
               placeholder="Например, актировка или карантин"
               autoFocus
               onKeyDown={e => { if (e.key === 'Enter') activate(); }}
-              className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-xl px-3.5 py-3 text-[14.5px] focus:outline-none focus:border-distant dark:focus:border-distant-dark mb-5"
+              className="w-full bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-xl px-3.5 py-3 text-[14.5px] focus:outline-none focus:border-distant dark:focus:border-distant-dark mb-3"
             />
+            <label className="flex items-start gap-3 cursor-pointer select-none mb-5">
+              <input
+                type="checkbox"
+                checked={notify}
+                onChange={e => setNotify(e.target.checked)}
+                className="mt-1 w-4 h-4 accent-accent"
+              />
+              <div className="flex-1">
+                <div className="text-[13.5px] font-semibold">Отправить push-уведомление о дистанте</div>
+                <div className="text-ink-3-light dark:text-ink-3-dark text-[12px] mt-0.5">
+                  Дойдёт до устройств, у которых включён тип «Дистант».
+                </div>
+              </div>
+            </label>
             <div className="flex gap-2">
               <button onClick={onClose} className="flex-1 py-3 rounded-xl bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark font-semibold text-[14px]">Отмена</button>
               <button onClick={activate} disabled={busy} className="flex-1 py-3 rounded-xl bg-distant dark:bg-distant-dark text-white font-semibold text-[14px] disabled:opacity-50">

@@ -36,7 +36,7 @@ export const api = {
     json<DayAllResponse>(`/day-all${dateIso ? `?date=${dateIso}` : ''}`),
   changelog: () => json<{ entries: PublicChangelogEntry[] }>('/changelog'),
 
-  pushRegister: (token: string, opts: { platform?: string; className?: string | null; teacherId?: number | null }) =>
+  pushRegister: (token: string, opts: { platform?: string; className?: string | null; teacherId?: number | null; notifPrefs?: { publish: boolean; changes: boolean; distant: boolean; manual: boolean } | null }) =>
     json<{ ok: boolean }>('/push/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

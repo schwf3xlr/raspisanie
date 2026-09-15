@@ -134,6 +134,9 @@ model DeviceToken {
   platform   String   @default("android")
   className  String?  // подписан на расписание этого класса
   teacherId  Int?     // ИЛИ на расписание учителя
+  // Настройки уведомлений устройства: { publish: bool, changes: bool, distant: bool, manual: bool }.
+  // null = все включены (значение по умолчанию для старых токенов).
+  notifPrefs Json?
   createdAt  DateTime @default(now())
   lastSeen   DateTime @default(now()) @updatedAt
 

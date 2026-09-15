@@ -67,23 +67,33 @@ export async function registerRoutes(app: FastifyInstance) {
   app.get('/api/health', async () => ({ ok: true }));
   app.get('/api/school', async () => SCHOOL);
 
-  // Регистрация FCM-токена устройства. Идемпотентно — при повторе просто обновляется lastSeen/подписка.
+  // Регистрация FCM-токена устройства. Идемпотентно — при повторе обновляется lastSeen/подписка/notifPrefs.
   app.post<{
     Body: {
       token?: string;
       platform?: string;
       className?: string | null;
       teacherId?: number | null;
+      notifPrefs?: { publish?: boolean; changes?: boolean; distant?: boolean; manual?: boolean } | null;
     };
   }>(
     '/api/push/register',
     async (req, reply) => {
-      const { token, platform, className, teacherId } = req.body ?? {};
+      const { token, platform, className, teacherId, notifPrefs } = req.body ?? {};
       if (!token || typeof token !== 'string' || token.length < 20) {
         return reply.code(400).send({ error: 'bad token' });
       }
       const cls = typeof className === 'string' && className ? className : null;
       const tid = typeof teacherId === 'number' && Number.isFinite(teacherId) ? teacherId : null;
+      // Санитайз prefs: только boolean-поля с известными ключами.
+      const prefs = notifPrefs && typeof notifPrefs === 'object'
+        ? {
+            publish: typeof notifPrefs.publish === 'boolean' ? notifPrefs.publish : true,
+            changes: typeof notifPrefs.changes === 'boolean' ? notifPrefs.changes : true,
+            distant: typeof notifPrefs.distant === 'boolean' ? notifPrefs.distant : true,
+            manual:  typeof notifPrefs.manual  === 'boolean' ? notifPrefs.manual  : true,
+          }
+        : undefined;
 
       await db.deviceToken.upsert({
         where: { token },
@@ -92,11 +102,14 @@ export async function registerRoutes(app: FastifyInstance) {
           platform: platform ?? 'android',
           className: cls,
           teacherId: tid,
+          notifPrefs: prefs ?? undefined,
         },
         update: {
           className: cls,
           teacherId: tid,
           platform: platform ?? undefined,
+          // Обновляем prefs только если пришли. Иначе оставляем предыдущие.
+          notifPrefs: prefs ?? undefined,
           // lastSeen обновляется автоматически (@updatedAt)
         },
       });

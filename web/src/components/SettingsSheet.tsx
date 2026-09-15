@@ -5,6 +5,7 @@ import type { ThemeMode } from '../lib/hooks';
 import type { SavedViewer } from '../lib/types';
 import { useAppVersion } from '../lib/version';
 import { checkForUpdate } from '../lib/update-check';
+import { getNotifPrefs, updateNotifPrefs, type NotifPrefs, type NotifKind } from '../lib/push';
 
 interface Props {
   open: boolean;
@@ -20,6 +21,14 @@ export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, t
   const isNative = Capacitor.isNativePlatform();
   const [checking, setChecking] = useState(false);
   const [updateMsg, setUpdateMsg] = useState<string | null>(null);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [prefs, setPrefs] = useState<NotifPrefs>(() => getNotifPrefs());
+
+  const togglePref = (k: NotifKind) => {
+    const next = { ...prefs, [k]: !prefs[k] };
+    setPrefs(next);
+    void updateNotifPrefs(next, viewer);
+  };
 
   if (!open) return null;
 
@@ -91,21 +100,75 @@ export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, t
         </div>
 
         {isNative && (
-          <div className="flex justify-between items-center py-4 border-t border-line-light dark:border-line-dark">
-            <div className="min-w-0">
-              <div className="text-[14.5px]">Обновление приложения</div>
-              <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5 truncate">
-                {updateMsg ?? 'Проверить наличие новой версии'}
-              </div>
+          <>
+            {/* Уведомления - раскрывающийся блок */}
+            <div className="border-t border-line-light dark:border-line-dark">
+              <button
+                onClick={() => setNotifOpen(v => !v)}
+                className="w-full flex justify-between items-center py-4 text-left"
+              >
+                <div>
+                  <div className="text-[14.5px]">Уведомления</div>
+                  <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5">
+                    {countEnabled(prefs)} из 4 включено
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                  className={['text-ink-3-light dark:text-ink-3-dark transition-transform', notifOpen ? 'rotate-180' : ''].join(' ')}>
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+
+              {notifOpen && (
+                <div className="pb-3 space-y-3">
+                  <NotifRow
+                    checked={prefs.publish}
+                    onToggle={() => togglePref('publish')}
+                    title="Публикация расписания"
+                    desc="Когда завуч опубликовал день или неделю"
+                  />
+                  <NotifRow
+                    checked={prefs.changes}
+                    onToggle={() => togglePref('changes')}
+                    title="Замены и изменения звонков"
+                    desc="Отмена урока, смена учителя, сдвиг времени"
+                  />
+                  <NotifRow
+                    checked={prefs.distant}
+                    onToggle={() => togglePref('distant')}
+                    title="Дистант"
+                    desc="Актировка, перевод дня или урока на дистанционный"
+                  />
+                  <NotifRow
+                    checked={prefs.manual}
+                    onToggle={() => togglePref('manual')}
+                    title="Ручные сообщения от школы"
+                    desc="Разовые уведомления от администратора"
+                  />
+                  <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark pt-1 leading-relaxed">
+                    Настройки сохраняются на этом устройстве. Если полностью отключить все, приложение всё равно
+                    будет получать критически важные системные уведомления от школы.
+                  </div>
+                </div>
+              )}
             </div>
-            <button
-              onClick={onCheckUpdate}
-              disabled={checking}
-              className="text-accent dark:text-accent-dark font-semibold shrink-0 ml-3 disabled:opacity-50"
-            >
-              {checking ? 'Проверяю…' : 'Проверить'}
-            </button>
-          </div>
+
+            <div className="flex justify-between items-center py-4 border-t border-line-light dark:border-line-dark">
+              <div className="min-w-0">
+                <div className="text-[14.5px]">Обновление приложения</div>
+                <div className="text-ink-3-light dark:text-ink-3-dark text-[12.5px] mt-0.5 truncate">
+                  {updateMsg ?? 'Проверить наличие новой версии'}
+                </div>
+              </div>
+              <button
+                onClick={onCheckUpdate}
+                disabled={checking}
+                className="text-accent dark:text-accent-dark font-semibold shrink-0 ml-3 disabled:opacity-50"
+              >
+                {checking ? 'Проверяю…' : 'Проверить'}
+              </button>
+            </div>
+          </>
         )}
 
         <div className="pt-4 border-t border-line-light dark:border-line-dark mt-0 flex flex-col gap-2 text-[12.5px] text-ink-3-light dark:text-ink-3-dark">
@@ -148,4 +211,36 @@ export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, t
       <style>{`@keyframes slideup { from { transform: translateY(100%); } to { transform: translateY(0); } }`}</style>
     </div>
   );
+}
+
+function NotifRow({ checked, onToggle, title, desc }: { checked: boolean; onToggle: () => void; title: string; desc: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className="w-full flex items-start gap-3 py-2 text-left group"
+    >
+      <div className="flex-1 min-w-0">
+        <div className="text-[14px] font-medium">{title}</div>
+        <div className="text-ink-3-light dark:text-ink-3-dark text-[12px] mt-0.5 leading-relaxed">{desc}</div>
+      </div>
+      <div
+        role="switch"
+        aria-checked={checked}
+        className={[
+          'shrink-0 relative w-10 h-6 rounded-full transition-colors mt-0.5',
+          checked ? 'bg-accent dark:bg-accent-dark' : 'bg-line-light dark:bg-line-2-dark',
+        ].join(' ')}
+      >
+        <span className={[
+          'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all',
+          checked ? 'left-[18px]' : 'left-0.5',
+        ].join(' ')} />
+      </div>
+    </button>
+  );
+}
+
+function countEnabled(p: NotifPrefs): number {
+  return (p.publish ? 1 : 0) + (p.changes ? 1 : 0) + (p.distant ? 1 : 0) + (p.manual ? 1 : 0);
 }

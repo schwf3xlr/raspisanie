@@ -107,14 +107,35 @@ interface Target {
   broadcast?: boolean; // всем зарегистрированным
 }
 
-export interface PushResult {
-  attempted: number;
-  succeeded: number;
-  cleaned: number;
+// Тип уведомления - определяет, кому уведомление разрешено настройками устройства.
+export type NotifKind = 'publish' | 'changes' | 'distant' | 'manual';
+
+// Настройки уведомлений на устройстве. По умолчанию (null) - все включены.
+export interface NotifPrefs {
+  publish?: boolean;   // публикация нового расписания
+  changes?: boolean;   // изменения в опубликованном (отмены, замены, изменение звонков)
+  distant?: boolean;   // дистанционный день
+  manual?: boolean;    // ручные рассылки от админа («6 урок отменён» и т.п.)
 }
 
-export async function sendPush(target: Target, payload: PushPayload): Promise<PushResult> {
-  if (!pushConfigured) return { attempted: 0, succeeded: 0, cleaned: 0 };
+function isKindAllowed(prefsJson: unknown, kind: NotifKind): boolean {
+  // Старые токены без prefs = все включено.
+  if (prefsJson == null) return true;
+  const p = prefsJson as Record<string, unknown>;
+  const v = p[kind];
+  // Явное false = выключено; всё остальное (true, undefined, null) = включено.
+  return v !== false;
+}
+
+export interface PushResult {
+  attempted: number;   // Сколько устройств теоретически получили бы (подписаны + kind разрешён).
+  succeeded: number;
+  cleaned: number;
+  skipped: number;     // Отфильтрованы настройками устройства.
+}
+
+export async function sendPush(target: Target, payload: PushPayload, opts: { kind: NotifKind }): Promise<PushResult> {
+  if (!pushConfigured) return { attempted: 0, succeeded: 0, cleaned: 0, skipped: 0 };
 
   const where = target.broadcast
     ? {}
@@ -124,16 +145,25 @@ export async function sendPush(target: Target, payload: PushPayload): Promise<Pu
         ? { teacherId: target.teacherId }
         : null;
 
-  if (!where) return { attempted: 0, succeeded: 0, cleaned: 0 };
+  if (!where) return { attempted: 0, succeeded: 0, cleaned: 0, skipped: 0 };
 
   const rows = await db.deviceToken.findMany({ where });
+  const eligible = rows.filter(r => isKindAllowed(r.notifPrefs, opts.kind));
+  const skipped = rows.length - eligible.length;
+
   let succeeded = 0;
   const invalidIds: number[] = [];
 
+  // Обогащаем data.kind - клиент может использовать при обработке.
+  const finalPayload: PushPayload = {
+    ...payload,
+    data: { ...(payload.data ?? {}), kind: opts.kind },
+  };
+
   await Promise.all(
-    rows.map(async row => {
+    eligible.map(async row => {
       try {
-        const r = await sendOne(row.token, payload);
+        const r = await sendOne(row.token, finalPayload);
         if (r.ok) succeeded++;
         else if (r.invalid) invalidIds.push(row.id);
       } catch (err) {
@@ -146,5 +176,5 @@ export async function sendPush(target: Target, payload: PushPayload): Promise<Pu
     await db.deviceToken.deleteMany({ where: { id: { in: invalidIds } } });
   }
 
-  return { attempted: rows.length, succeeded, cleaned: invalidIds.length };
+  return { attempted: eligible.length, succeeded, cleaned: invalidIds.length, skipped };
 }

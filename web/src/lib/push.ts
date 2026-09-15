@@ -7,6 +7,50 @@ import type { SavedViewer } from './types';
 
 const TOKEN_KEY = 'push_token';
 const LAST_VIEWER_KEY = 'push_last_viewer';
+const PREFS_KEY = 'notif_prefs';
+
+export type NotifKind = 'publish' | 'changes' | 'distant' | 'manual';
+export interface NotifPrefs {
+  publish: boolean;
+  changes: boolean;
+  distant: boolean;
+  manual: boolean;
+}
+
+const DEFAULT_PREFS: NotifPrefs = { publish: true, changes: true, distant: true, manual: true };
+
+export function getNotifPrefs(): NotifPrefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (!raw) return { ...DEFAULT_PREFS };
+    const parsed = JSON.parse(raw) as Partial<NotifPrefs>;
+    return {
+      publish: typeof parsed.publish === 'boolean' ? parsed.publish : true,
+      changes: typeof parsed.changes === 'boolean' ? parsed.changes : true,
+      distant: typeof parsed.distant === 'boolean' ? parsed.distant : true,
+      manual:  typeof parsed.manual  === 'boolean' ? parsed.manual  : true,
+    };
+  } catch { return { ...DEFAULT_PREFS }; }
+}
+
+function saveNotifPrefsLocal(p: NotifPrefs): void {
+  try { localStorage.setItem(PREFS_KEY, JSON.stringify(p)); } catch { /* ignore */ }
+}
+
+// Сохранить настройки локально и отправить на бэкенд. Если токена ещё нет -
+// он подхватится при следующей регистрации (см. registration listener).
+export async function updateNotifPrefs(next: NotifPrefs, viewer: import('./types').SavedViewer | null): Promise<void> {
+  saveNotifPrefsLocal(next);
+  if (!isPushSupported()) return;
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
+  try {
+    await registerToken(token, viewer);
+    console.log('[push] настройки уведомлений синхронизированы:', next);
+  } catch (err) {
+    console.error('[push] updateNotifPrefs failed:', err);
+  }
+}
 
 interface RegistrationOpts {
   viewer: SavedViewer | null;
@@ -91,6 +135,7 @@ async function registerToken(token: string, viewer: SavedViewer | null): Promise
     platform: 'android',
     className: viewer?.mode === 'class' ? (viewer.className ?? null) : null,
     teacherId: viewer?.mode === 'teacher' ? (viewer.teacherId ?? null) : null,
+    notifPrefs: getNotifPrefs(),
   };
   await api.pushRegister(token, opts);
   localStorage.setItem(LAST_VIEWER_KEY, viewerKey(viewer));

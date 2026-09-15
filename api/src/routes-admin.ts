@@ -620,15 +620,17 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           ? req.body.notifyClasses
           : [null]; // null → broadcast
 
-        push = { attempted: 0, succeeded: 0, cleaned: 0 };
+        push = { attempted: 0, succeeded: 0, cleaned: 0, skipped: 0 };
         for (const cls of targets) {
           const r = await sendPush(
             cls ? { className: cls } : { broadcast: true },
             { title, body, data: { date: req.body.date, className: cls ?? '' } },
+            { kind: 'publish' },
           );
           push.attempted += r.attempted;
           push.succeeded += r.succeeded;
           push.cleaned += r.cleaned;
+          push.skipped += r.skipped;
         }
       }
 
@@ -675,15 +677,17 @@ export async function registerAdminRoutes(app: FastifyInstance) {
           ? req.body.notifyClasses
           : [null];
 
-        push = { attempted: 0, succeeded: 0, cleaned: 0 };
+        push = { attempted: 0, succeeded: 0, cleaned: 0, skipped: 0 };
         for (const cls of targets) {
           const r = await sendPush(
             cls ? { className: cls } : { broadcast: true },
             { title, body, data: { weekStart: req.body.weekStart, className: cls ?? '' } },
+            { kind: 'publish' },
           );
           push.attempted += r.attempted;
           push.succeeded += r.succeeded;
           push.cleaned += r.cleaned;
+          push.skipped += r.skipped;
         }
       }
 
@@ -691,32 +695,38 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     }
   );
 
-  // Ручная рассылка — для «6 урок отменён» и подобного.
+  // Ручная рассылка — для «6 урок отменён», «сегодня дистант» и подобного.
+  // kind позволяет уважать настройки уведомлений пользователя: например 'changes'
+  // для отмен и замен, 'distant' для дистанта. По умолчанию 'manual'.
   app.post<{
     Body: {
       title?: string;
       body: string;
       classes?: string[]; // пусто → всем
+      kind?: 'manual' | 'changes' | 'distant' | 'publish';
     };
   }>(
     '/api/admin/push/broadcast',
     { preHandler: (req, reply) => requireAdmin(req, reply) },
     async (req, reply) => {
-      const { title, body, classes } = req.body ?? {};
+      const { title, body, classes, kind } = req.body ?? {};
       if (!body || typeof body !== 'string') return reply.code(400).send({ error: 'body обязателен' });
       if (!pushConfigured) return reply.code(503).send({ error: 'FCM не сконфигурирован', hint: 'см. PUSH.md' });
+      const finalKind = kind || 'manual';
 
       const targets = classes && classes.length > 0 ? classes : [null];
-      let total: PushResult = { attempted: 0, succeeded: 0, cleaned: 0 };
+      let total: PushResult = { attempted: 0, succeeded: 0, cleaned: 0, skipped: 0 };
       for (const cls of targets) {
         const r = await sendPush(
           cls ? { className: cls } : { broadcast: true },
           { title: title || 'Уведомление', body, data: { className: cls ?? '' } },
+          { kind: finalKind },
         );
         total = {
           attempted: total.attempted + r.attempted,
           succeeded: total.succeeded + r.succeeded,
           cleaned: total.cleaned + r.cleaned,
+          skipped: total.skipped + r.skipped,
         };
       }
       return { ok: true, push: total };

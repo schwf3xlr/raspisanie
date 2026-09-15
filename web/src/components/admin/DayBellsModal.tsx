@@ -66,6 +66,7 @@ export default function DayBellsModal({ date, dateLabel, timeSlots, template, ov
   }, [timeSlots, template, overrides]);
 
   const [rows, setRows] = useState<Row[]>(initial);
+  const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +86,13 @@ export default function DayBellsModal({ date, dateLabel, timeSlots, template, ov
         .map(r => ({ number: r.number, timeStart: r.timeStart, timeEnd: r.timeEnd }));
       if (changed.length === 0) { onClose(); return; }
       await adminApi.setDayBells({ date, rows: changed });
+      if (notify) {
+        await adminApi.pushBroadcast({
+          title: 'Изменены звонки',
+          body: `На ${dateLabel.toLowerCase()} изменено время уроков. Загляните в расписание.`,
+          kind: 'changes',
+        }).catch(err => console.warn('pushBroadcast failed:', err));
+      }
       onSaved();
       onClose();
     } catch (err) {
@@ -144,6 +152,23 @@ export default function DayBellsModal({ date, dateLabel, timeSlots, template, ov
 
         {error && (
           <div className="mb-3 text-[13px] text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/40 rounded-xl px-3 py-2.5">{error}</div>
+        )}
+
+        {anyDirty && (
+          <label className="flex items-start gap-3 cursor-pointer select-none mb-4 pt-1">
+            <input
+              type="checkbox"
+              checked={notify}
+              onChange={e => setNotify(e.target.checked)}
+              className="mt-1 w-4 h-4 accent-accent"
+            />
+            <div className="flex-1">
+              <div className="text-[13.5px] font-semibold">Отправить push об изменении звонков</div>
+              <div className="text-ink-3-light dark:text-ink-3-dark text-[12px] mt-0.5">
+                Дойдёт до устройств, у которых включён тип «Замены и изменения звонков».
+              </div>
+            </div>
+          </label>
         )}
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
