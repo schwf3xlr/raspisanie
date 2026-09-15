@@ -2,12 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { adminApi, type ApkStatus, type ApkFileInfo, type ChangelogEntry, type PushTokenInfo } from '../../lib/admin-api';
 import { confirmDialog } from '../../lib/dialog';
 
+type Tab = 'release' | 'changelog' | 'devices';
+
 export default function AdminApp() {
   const [status, setStatus] = useState<ApkStatus | null>(null);
   const [changelog, setChangelog] = useState<ChangelogEntry[] | null>(null);
   const [tokens, setTokens] = useState<PushTokenInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tab, setTab] = useState<Tab>('release');
 
   const refresh = useCallback(async () => {
     setError(null);
@@ -161,12 +164,29 @@ export default function AdminApp() {
 
   return (
     <div className="min-h-screen">
-      <header className="px-4 md:px-8 pt-6 md:pt-8 pb-5 border-b border-line-light dark:border-line-dark">
+      <header className="px-4 md:px-8 pt-6 md:pt-8 pb-4 border-b border-line-light dark:border-line-dark">
         <h1 className="font-serif text-[28px] md:text-[36px] -tracking-[.02em] leading-none font-normal">Приложение</h1>
-        <p className="text-ink-2-light dark:text-ink-2-dark text-[13.5px] mt-1.5">
-          Загрузка новых APK-релизов и управление файлом <code className="bg-panel-light dark:bg-panel-dark px-1.5 py-0.5 rounded">latest.json</code>,
-          из которого приложение узнаёт о новых версиях.
+        <p className="text-ink-2-light dark:text-ink-2-dark text-[13.5px] mt-1.5 mb-4">
+          Управление мобильным приложением: релиз новой версии, история изменений, подключённые устройства.
         </p>
+        <div className="flex gap-1 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-full p-1 w-fit max-w-full overflow-x-auto no-scrollbar">
+          {([
+            { id: 'release',   label: 'Релиз' },
+            { id: 'changelog', label: `История${changelog?.length ? ` · ${changelog.length}` : ''}` },
+            { id: 'devices',   label: `Устройства${tokens?.length ? ` · ${tokens.length}` : ''}` },
+          ] as Array<{ id: Tab; label: string }>).map(x => (
+            <button
+              key={x.id}
+              onClick={() => setTab(x.id)}
+              className={[
+                'shrink-0 px-3.5 md:px-4 py-1.5 rounded-full text-[13px] font-semibold transition-colors',
+                tab === x.id
+                  ? 'bg-ink-light text-bg-light dark:bg-ink-dark dark:text-bg-dark'
+                  : 'text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark',
+              ].join(' ')}
+            >{x.label}</button>
+          ))}
+        </div>
       </header>
 
       <div className="px-4 md:px-8 py-6 space-y-6 max-w-4xl">
@@ -199,6 +219,7 @@ export default function AdminApp() {
           </div>
         )}
 
+        {tab === 'release' && (<>
         {/* ============= Загрузка APK ============= */}
         <section className="border border-line-light dark:border-line-dark rounded-2xl p-5">
           <h2 className="font-serif text-[20px] mb-1">Загрузить новый APK</h2>
@@ -396,8 +417,10 @@ export default function AdminApp() {
             )}
           </div>
         </section>
+        </>)}
 
-        {/* ============= История версий (changelog.json) ============= */}
+        {tab === 'changelog' && (
+        /* ============= История версий (changelog.json) ============= */
         <section className="border border-line-light dark:border-line-dark rounded-2xl p-5">
           <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
             <h2 className="font-serif text-[20px]">История версий</h2>
@@ -453,8 +476,10 @@ export default function AdminApp() {
             </ul>
           )}
         </section>
+        )}
 
-        {/* ============= Токены push-уведомлений ============= */}
+        {tab === 'devices' && (
+        /* ============= Токены push-уведомлений ============= */
         <section className="border border-line-light dark:border-line-dark rounded-2xl p-5">
           <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
             <h2 className="font-serif text-[20px]">Токены устройств</h2>
@@ -547,6 +572,7 @@ export default function AdminApp() {
             </ul>
           )}
         </section>
+        )}
       </div>
     </div>
   );

@@ -178,22 +178,23 @@ export default function FullGridPage() {
                   <tr key={n}>
                     <th className={[
                       'sticky left-0 z-10 px-2 py-2 border-b border-r border-line-light dark:border-line-dark text-center w-[68px] md:w-[92px]',
-                      bellChanged ? 'bg-yellow-100/80 dark:bg-yellow-900/30' : 'bg-bg-light dark:bg-bg-dark',
+                      // Непрозрачный фон обязателен: полупрозрачный жёлтый пропускал уроки при горизонтальной прокрутке.
+                      bellChanged ? 'bg-yellow-100 dark:bg-yellow-900' : 'bg-bg-light dark:bg-bg-dark',
                     ].join(' ')}
                       title={bellChanged ? 'Звонок изменён только на эту дату' : undefined}
                     >
                       <div className={[
                         'font-serif text-[18px] leading-none tabular-nums',
-                        bellChanged ? 'text-yellow-800 dark:text-yellow-200' : '',
+                        bellChanged ? 'text-yellow-900 dark:text-yellow-50' : '',
                       ].join(' ')}>{n}</div>
                       <div className={[
                         'tabular-nums mt-1 font-medium leading-tight',
                         bellChanged
-                          ? 'text-[10px] text-yellow-800 dark:text-yellow-200'
+                          ? 'text-[10px] text-yellow-900 dark:text-yellow-50'
                           : 'text-[10px] text-ink-3-light dark:text-ink-3-dark',
                       ].join(' ')}>
                         {t?.timeStart}
-                        {t?.timeEnd && <div className={bellChanged ? 'text-[9.5px] text-yellow-700/80 dark:text-yellow-300/80' : 'text-[9.5px] opacity-70'}>{t.timeEnd}</div>}
+                        {t?.timeEnd && <div className={bellChanged ? 'text-[9.5px] text-yellow-800 dark:text-yellow-100' : 'text-[9.5px] opacity-70'}>{t.timeEnd}</div>}
                       </div>
                     </th>
                     {data.classes.map(cls => {
