@@ -75,7 +75,10 @@ async function sendOne(token: string, payload: PushPayload): Promise<{ ok: boole
         priority: 'HIGH' as const,
         notification: {
           channel_id: 'schedule',
-          click_action: 'FLUTTER_NOTIFICATION_CLICK', // условно; Capacitor использует свои intents
+          // click_action НЕ задаём: Capacitor push-plugin обрабатывает клик через дефолтный
+          // launcher-intent - открывает MAIN activity нашего приложения и триггерит
+          // pushNotificationActionPerformed на клиенте. Кастомный action ломает клик,
+          // потому что такого intent-filter в манифесте нет.
         },
       },
     },
