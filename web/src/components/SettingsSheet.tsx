@@ -63,7 +63,7 @@ export default function SettingsSheet({ open, onClose, viewer, onChangeViewer, t
       className="fixed inset-0 bg-black/40 flex items-end md:items-center justify-center z-20 md:p-6"
       onClick={e => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-bg-light dark:bg-bg-dark w-full max-w-md rounded-t-3xl md:rounded-3xl px-6 pt-6 pb-8 animate-[slideup_.25s_ease-out]">
+      <div className="bg-bg-light dark:bg-bg-dark w-full max-w-md rounded-t-3xl md:rounded-3xl px-6 pt-6 pb-8 animate-[slideup_.25s_ease-out] max-h-[92vh] md:max-h-[85vh] overflow-y-auto overscroll-contain">
         <h3 className="font-serif font-medium text-[22px] -tracking-[.01em] mb-1">Настройки</h3>
 
         <div className="flex justify-between items-center py-4 pt-5">
