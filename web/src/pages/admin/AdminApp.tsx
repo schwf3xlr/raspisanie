@@ -1,22 +1,25 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { adminApi, type ApkStatus, type ApkFileInfo, type ChangelogEntry } from '../../lib/admin-api';
+import { adminApi, type ApkStatus, type ApkFileInfo, type ChangelogEntry, type PushTokenInfo } from '../../lib/admin-api';
 import { confirmDialog } from '../../lib/dialog';
 
 export default function AdminApp() {
   const [status, setStatus] = useState<ApkStatus | null>(null);
   const [changelog, setChangelog] = useState<ChangelogEntry[] | null>(null);
+  const [tokens, setTokens] = useState<PushTokenInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     setError(null);
     try {
-      const [s, cl] = await Promise.all([
+      const [s, cl, tk] = await Promise.all([
         adminApi.apkStatus(),
         adminApi.changelog().catch(() => ({ entries: [] as ChangelogEntry[] })),
+        adminApi.pushTokens().catch(() => ({ tokens: [] as PushTokenInfo[] })),
       ]);
       setStatus(s);
       setChangelog(cl.entries);
+      setTokens(tk.tokens);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -445,6 +448,100 @@ export default function AdminApp() {
                       Удалить запись
                     </button>
                   </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {/* ============= Токены push-уведомлений ============= */}
+        <section className="border border-line-light dark:border-line-dark rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
+            <h2 className="font-serif text-[20px]">Токены устройств</h2>
+            <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums">
+              всего: {tokens?.length ?? 0}
+            </div>
+          </div>
+          <p className="text-ink-2-light dark:text-ink-2-dark text-[13px] mb-4">
+            Каждая установка приложения (в т.ч. переустановка / очистка данных) регистрирует свой токен.
+            Старые токены удаляются автоматически, когда FCM отклонит отправку. Тут можно почистить руками.
+          </p>
+
+          {tokens && tokens.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              <button
+                onClick={async () => {
+                  const ok = await confirmDialog({
+                    title: 'Удалить неактивные токены?',
+                    message: 'Будут удалены токены, у которых lastSeen старше 30 дней.',
+                    confirmText: 'Удалить',
+                  });
+                  if (!ok) return;
+                  const r = await adminApi.cleanupPushTokens({ olderThanDays: 30 });
+                  flash(`Удалено токенов: ${r.deleted}`);
+                  await refresh();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark text-[12.5px] font-semibold text-ink-2-light dark:text-ink-2-dark">
+                Почистить старше 30 дней
+              </button>
+              <button
+                onClick={async () => {
+                  const ok = await confirmDialog({
+                    title: 'Удалить ВСЕ токены?',
+                    message: 'После этого никто не получит push, пока приложения не перезарегистрируются (это произойдёт при следующем открытии).',
+                    confirmText: 'Удалить все', danger: true,
+                  });
+                  if (!ok) return;
+                  const r = await adminApi.cleanupPushTokens({ all: true });
+                  flash(`Удалено токенов: ${r.deleted}`);
+                  await refresh();
+                }}
+                className="px-3 py-1.5 rounded-lg border border-red-300/60 dark:border-red-900/60 text-red-600 dark:text-red-400 text-[12.5px] font-semibold">
+                Удалить все
+              </button>
+            </div>
+          )}
+
+          {tokens == null ? (
+            <div className="text-ink-3-light dark:text-ink-3-dark text-[13px]">Загружаем…</div>
+          ) : tokens.length === 0 ? (
+            <div className="text-ink-3-light dark:text-ink-3-dark text-[13px]">Ни одного устройства.</div>
+          ) : (
+            <ul className="divide-y divide-line-light dark:divide-line-dark">
+              {tokens.map(t => (
+                <li key={t.id} className="py-3 flex items-start gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-mono text-[12.5px] break-all text-ink-light dark:text-ink-dark">{t.tokenPreview}</div>
+                    <div className="text-[11.5px] text-ink-3-light dark:text-ink-3-dark tabular-nums mt-1 flex gap-2 flex-wrap">
+                      <span>{t.platform}</span>
+                      <span>·</span>
+                      <span>
+                        {t.className
+                          ? <>класс <b className="text-ink-2-light dark:text-ink-2-dark">{t.className}</b></>
+                          : t.teacherId
+                            ? <>учитель #{t.teacherId}</>
+                            : 'без подписки'}
+                      </span>
+                      <span>·</span>
+                      <span>создан {new Date(t.createdAt).toLocaleString('ru')}</span>
+                      <span>·</span>
+                      <span>обновлён {new Date(t.lastSeen).toLocaleString('ru')}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const ok = await confirmDialog({
+                        title: 'Удалить токен?',
+                        message: 'Устройство перестанет получать push. При следующем открытии приложение зарегистрируется заново.',
+                        confirmText: 'Удалить', danger: true,
+                      });
+                      if (!ok) return;
+                      await adminApi.deletePushToken(t.id);
+                      await refresh();
+                    }}
+                    className="shrink-0 px-3 py-1.5 rounded-lg border border-red-300/60 dark:border-red-900/60 text-red-600 dark:text-red-400 text-[12px] font-semibold">
+                    Удалить
+                  </button>
                 </li>
               ))}
             </ul>

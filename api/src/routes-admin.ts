@@ -743,6 +743,56 @@ export async function registerAdminRoutes(app: FastifyInstance) {
     },
   );
 
+  // Список токенов - только tech, чтобы понять «а не дубли ли одного устройства».
+  app.get(
+    '/api/admin/push/tokens',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async () => {
+      const rows = await db.deviceToken.findMany({ orderBy: { createdAt: 'desc' } });
+      return {
+        tokens: rows.map(r => ({
+          id: r.id,
+          // Первые и последние 8 символов - достаточно для сверки с телефоном, не даём весь ключ.
+          tokenPreview: r.token.length > 20 ? `${r.token.slice(0, 8)}…${r.token.slice(-8)}` : r.token,
+          platform: r.platform,
+          className: r.className,
+          teacherId: r.teacherId,
+          createdAt: r.createdAt.toISOString(),
+          lastSeen: r.lastSeen.toISOString(),
+        })),
+      };
+    },
+  );
+
+  // Удалить один токен по id - только tech.
+  app.delete<{ Params: { id: string } }>(
+    '/api/admin/push/tokens/:id',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req) => {
+      const id = Number(req.params.id);
+      if (Number.isFinite(id)) await db.deviceToken.deleteMany({ where: { id } });
+      return { ok: true };
+    },
+  );
+
+  // Массовая чистка: все токены (danger) или старее N дней.
+  app.post<{ Body: { olderThanDays?: number; all?: boolean } }>(
+    '/api/admin/push/tokens/cleanup',
+    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    async (req) => {
+      const b = req.body ?? {};
+      if (b.all) {
+        const r = await db.deviceToken.deleteMany({});
+        return { ok: true, deleted: r.count };
+      }
+      const days = Number(b.olderThanDays);
+      if (!Number.isFinite(days) || days <= 0) return { ok: true, deleted: 0 };
+      const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+      const r = await db.deviceToken.deleteMany({ where: { lastSeen: { lt: cutoff } } });
+      return { ok: true, deleted: r.count };
+    },
+  );
+
   // ---------- звонки ----------
   app.get<{ Querystring: { day?: string } }>(
     '/api/admin/timeslots',

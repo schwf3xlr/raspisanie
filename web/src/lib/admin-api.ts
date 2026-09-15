@@ -144,6 +144,16 @@ export interface ApkStatus {
   files: ApkFileInfo[];
 }
 
+export interface PushTokenInfo {
+  id: number;
+  tokenPreview: string;
+  platform: string;
+  className: string | null;
+  teacherId: number | null;
+  createdAt: string;
+  lastSeen: string;
+}
+
 export interface ChangelogEntry {
   versionCode: number;
   versionName: string;
@@ -201,6 +211,12 @@ export const adminApi = {
   apkSaveManifest: (m: { versionCode: number; versionName: string; apkUrl: string; changelog?: string; mandatory?: boolean }) =>
     req<{ ok: true; manifest: ApkManifest }>('/apk/manifest', { method: 'PUT', body: JSON.stringify(m) }),
   apkDeleteManifest: () => req<{ ok: true }>('/apk/manifest', { method: 'DELETE' }),
+
+  // Токены push-уведомлений - только tech, для диагностики
+  pushTokens: () => req<{ tokens: PushTokenInfo[] }>('/push/tokens'),
+  deletePushToken: (id: number) => req<{ ok: true }>(`/push/tokens/${id}`, { method: 'DELETE' }),
+  cleanupPushTokens: (body: { all?: boolean; olderThanDays?: number }) =>
+    req<{ ok: true; deleted: number }>('/push/tokens/cleanup', { method: 'POST', body: JSON.stringify(body) }),
 
   // История версий (только tech)
   changelog: () => req<{ entries: ChangelogEntry[] }>('/changelog'),
