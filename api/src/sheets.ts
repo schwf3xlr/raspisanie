@@ -97,6 +97,40 @@ function parseTimeCell(raw: string): { start: string; end: string } | null {
   return { start: norm(m[1]!), end: norm(m[2]!) };
 }
 
+// Разбирает ячейку урока: три строки на подгруппу (предмет / учитель / кабинет).
+// Если строк меньше 3 - трактуем как одну подгруппу с недостающими пустыми полями.
+// Пример: «Физ.культура\nПанов А.В.\nс/з» → [{ subject, teacher, room }].
+// Пример деления: «Технология Д\nДроботун Л.Н.\n101 кб.\nТехнология М\nПанов А.В.\n107а кб.» → 2 подгруппы.
+interface ParsedGroupText {
+  subject: string;
+  teacher: string; // shortName учителя
+  room: string;    // название кабинета
+}
+function parseLessonCell(raw: string): ParsedGroupText[] {
+  const lines = String(raw ?? '')
+    .split(/\r?\n/)
+    .map(l => l.trim())
+    .filter(l => l.length > 0);
+  if (lines.length === 0) return [];
+  const groups: ParsedGroupText[] = [];
+  // Идём тройками. Если хвост меньше 3 - трактуем как последнюю подгруппу с пустыми полями.
+  for (let i = 0; i < lines.length; i += 3) {
+    const subject = lines[i] ?? '';
+    const teacher = lines[i + 1] ?? '';
+    const room    = lines[i + 2] ?? '';
+    if (!subject) continue;
+    groups.push({ subject, teacher, room });
+  }
+  return groups;
+}
+
+// Сериализация обратно в ячейку - три строки на подгруппу.
+function serializeLessonCell(groups: ParsedGroupText[]): string {
+  return groups
+    .map(g => [g.subject, g.teacher, g.room].filter(x => x != null).join('\n'))
+    .join('\n');
+}
+
 // Название листа под конкретный день недели. Возвращает точное имя, как оно записано в таблице.
 async function resolveSheetTitleForDay(sheets: sheets_v4.Sheets, spreadsheetId: string, day: DayName): Promise<string | null> {
   const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties.title' });
@@ -122,13 +156,45 @@ export async function importTemplateFromSheet(spreadsheetId: string): Promise<Im
   const sheets = getClient();
   const warnings: string[] = [];
 
-  // Загружаем справочники (нам понадобится subjectByName).
-  const [subjects, classes] = await Promise.all([
+  // Загружаем справочники + функции lookup-or-create.
+  const [subjects, teachers, rooms, classes] = await Promise.all([
     db.subject.findMany(),
+    db.teacher.findMany(),
+    db.room.findMany(),
     db.class.findMany(),
   ]);
   const subjectByLower = new Map(subjects.map(s => [s.name.trim().toLowerCase(), s]));
+  const teacherByLower = new Map(teachers.map(t => [t.shortName.trim().toLowerCase(), t]));
+  const roomByLower = new Map(rooms.map(r => [r.name.trim().toLowerCase(), r]));
   const classNames = new Set(classes.map(c => c.name));
+
+  const resolveSubjectId = async (name: string): Promise<number> => {
+    const key = name.toLowerCase();
+    let s = subjectByLower.get(key);
+    if (!s) { s = await db.subject.create({ data: { name } }); subjectByLower.set(key, s); }
+    return s.id;
+  };
+  const resolveTeacherId = async (shortName: string): Promise<number | null> => {
+    if (!shortName) return null;
+    const key = shortName.toLowerCase();
+    let t = teacherByLower.get(key);
+    if (!t) {
+      // Автосоздаём с fullName = shortName (админ потом уточнит через Справочники).
+      t = await db.teacher.create({ data: { fullName: shortName, shortName } }).catch(() => undefined as never);
+      if (t) teacherByLower.set(key, t);
+    }
+    return t?.id ?? null;
+  };
+  const resolveRoomId = async (name: string): Promise<number | null> => {
+    if (!name) return null;
+    const key = name.toLowerCase();
+    let r = roomByLower.get(key);
+    if (!r) {
+      r = await db.room.create({ data: { name, kind: 'regular' } }).catch(() => undefined as never);
+      if (r) roomByLower.set(key, r);
+    }
+    return r?.id ?? null;
+  };
 
   let totalLessons = 0;
   let totalSlots = 0;
@@ -195,18 +261,18 @@ export async function importTemplateFromSheet(spreadsheetId: string): Promise<Im
 
       for (let rowIdx = 0; rowIdx < LESSON_NUMBERS.length; rowIdx++) {
         const number = LESSON_NUMBERS[rowIdx]!;
-        const cellRaw = String(lessonRows[rowIdx]?.[h.colIndex] ?? '').trim();
-        if (!cellRaw) continue;
-        // Ищем предмет.
-        let subject = subjectByLower.get(cellRaw.toLowerCase());
-        if (!subject) {
-          // Автосоздаём предмет.
-          subject = await db.subject.create({ data: { name: cellRaw } });
-          subjectByLower.set(cellRaw.toLowerCase(), subject);
+        const cellRaw = String(lessonRows[rowIdx]?.[h.colIndex] ?? '');
+        const parsed = parseLessonCell(cellRaw);
+        if (parsed.length === 0) continue;
+        const groups: GroupRef[] = [];
+        for (const g of parsed) {
+          groups.push({
+            subjectId: await resolveSubjectId(g.subject),
+            teacherId: await resolveTeacherId(g.teacher),
+            roomId: await resolveRoomId(g.room),
+          });
         }
-        // Время: если в этот шаблон уже добавлено через timeSlot - берём из TimeSlot.
         const slot = await db.timeSlot.findUnique({ where: { day_number: { day, number } } });
-        const groups: GroupRef[] = [{ subjectId: subject.id, teacherId: null, roomId: null }];
         await db.lessonTemplate.create({
           data: {
             day,
@@ -231,11 +297,25 @@ export async function exportTemplateToSheet(spreadsheetId: string): Promise<{ ok
   const sheets = getClient();
   const warnings: string[] = [];
 
-  const [subjects, classes] = await Promise.all([
+  const [subjects, teachers, rooms, classes] = await Promise.all([
     db.subject.findMany(),
+    db.teacher.findMany(),
+    db.room.findMany(),
     db.class.findMany({ orderBy: { sortKey: 'asc' } }),
   ]);
   const subjectById = new Map(subjects.map(s => [s.id, s]));
+  const teacherById = new Map(teachers.map(t => [t.id, t]));
+  const roomById = new Map(rooms.map(r => [r.id, r]));
+
+  const cellForGroups = (groupsRaw: GroupRef[]): string => {
+    if (!Array.isArray(groupsRaw) || groupsRaw.length === 0) return '';
+    const parsed: ParsedGroupText[] = groupsRaw.map(g => ({
+      subject: subjectById.get(g.subjectId)?.name ?? '',
+      teacher: g.teacherId != null ? (teacherById.get(g.teacherId)?.shortName ?? '') : '',
+      room:    g.roomId    != null ? (roomById.get(g.roomId)?.name ?? '')       : '',
+    }));
+    return serializeLessonCell(parsed);
+  };
 
   let sheetsWritten = 0;
 
@@ -269,11 +349,7 @@ export async function exportTemplateToSheet(spreadsheetId: string): Promise<{ ok
       cols.map(c => {
         const tpl = tplByKey.get(`${c.name}::${n}`);
         if (!tpl) return '';
-        // Пишем только первый предмет из groups.
-        const groupsRaw = tpl.groups as unknown as GroupRef[];
-        const first = Array.isArray(groupsRaw) ? groupsRaw[0] : null;
-        if (!first) return '';
-        return subjectById.get(first.subjectId)?.name ?? '';
+        return cellForGroups(tpl.groups as unknown as GroupRef[]);
       }),
     );
 
@@ -305,12 +381,43 @@ export async function importScheduleFromSheet(
   const sheets = getClient();
   const warnings: string[] = [];
 
-  const [subjects, classes] = await Promise.all([
+  const [subjects, teachers, rooms, classes] = await Promise.all([
     db.subject.findMany(),
+    db.teacher.findMany(),
+    db.room.findMany(),
     db.class.findMany(),
   ]);
   const subjectByLower = new Map(subjects.map(s => [s.name.trim().toLowerCase(), s]));
+  const teacherByLower = new Map(teachers.map(t => [t.shortName.trim().toLowerCase(), t]));
+  const roomByLower = new Map(rooms.map(r => [r.name.trim().toLowerCase(), r]));
   const classNames = new Set(classes.map(c => c.name));
+
+  const resolveSubjectId = async (name: string): Promise<number> => {
+    const key = name.toLowerCase();
+    let s = subjectByLower.get(key);
+    if (!s) { s = await db.subject.create({ data: { name } }); subjectByLower.set(key, s); }
+    return s.id;
+  };
+  const resolveTeacherId = async (shortName: string): Promise<number | null> => {
+    if (!shortName) return null;
+    const key = shortName.toLowerCase();
+    let t = teacherByLower.get(key);
+    if (!t) {
+      t = await db.teacher.create({ data: { fullName: shortName, shortName } }).catch(() => undefined as never);
+      if (t) teacherByLower.set(key, t);
+    }
+    return t?.id ?? null;
+  };
+  const resolveRoomId = async (name: string): Promise<number | null> => {
+    if (!name) return null;
+    const key = name.toLowerCase();
+    let r = roomByLower.get(key);
+    if (!r) {
+      r = await db.room.create({ data: { name, kind: 'regular' } }).catch(() => undefined as never);
+      if (r) roomByLower.set(key, r);
+    }
+    return r?.id ?? null;
+  };
 
   const workdays = workdaysOfWeek(fromISODate(weekMondayIso));
 
@@ -381,13 +488,14 @@ export async function importScheduleFromSheet(
       // Проходим по всем строкам уроков.
       for (let rowIdx = 0; rowIdx < LESSON_NUMBERS.length; rowIdx++) {
         const number = LESSON_NUMBERS[rowIdx]!;
-        const cellRaw = String(lessonRows[rowIdx]?.[h.colIndex] ?? '').trim();
+        const cellRaw = String(lessonRows[rowIdx]?.[h.colIndex] ?? '');
+        const parsed = parseLessonCell(cellRaw);
         const bellsForNum = dayBells.get(number);
         const stdSlot = slotByNum.get(number);
         const timeStart = bellsForNum?.start ?? stdSlot?.timeStart ?? '';
         const timeEnd   = bellsForNum?.end   ?? stdSlot?.timeEnd   ?? '';
 
-        if (!cellRaw) {
+        if (parsed.length === 0) {
           // Урока нет - override с isCancelled=true, если ранее был запланирован.
           const tpl = await db.lessonTemplate.findFirst({ where: { day, className: h.className, number } });
           if (tpl) {
@@ -400,13 +508,14 @@ export async function importScheduleFromSheet(
           continue;
         }
 
-        let subject = subjectByLower.get(cellRaw.toLowerCase());
-        if (!subject) {
-          subject = await db.subject.create({ data: { name: cellRaw } });
-          subjectByLower.set(cellRaw.toLowerCase(), subject);
+        const groups: GroupRef[] = [];
+        for (const g of parsed) {
+          groups.push({
+            subjectId: await resolveSubjectId(g.subject),
+            teacherId: await resolveTeacherId(g.teacher),
+            roomId: await resolveRoomId(g.room),
+          });
         }
-
-        const groups: GroupRef[] = [{ subjectId: subject.id, teacherId: null, roomId: null }];
         await db.lessonOverride.upsert({
           where: { date_className_number: { date: dbDate, className: h.className, number } },
           create: { date: dbDate, className: h.className, number, timeStart, timeEnd, groups: groups as unknown as object, isCancelled: false },
@@ -430,11 +539,25 @@ export async function exportScheduleToSheet(
   const sheets = getClient();
   const warnings: string[] = [];
 
-  const [subjects, classes] = await Promise.all([
+  const [subjects, teachers, rooms, classes] = await Promise.all([
     db.subject.findMany(),
+    db.teacher.findMany(),
+    db.room.findMany(),
     db.class.findMany({ orderBy: { sortKey: 'asc' } }),
   ]);
   const subjectById = new Map(subjects.map(s => [s.id, s]));
+  const teacherById = new Map(teachers.map(t => [t.id, t]));
+  const roomById = new Map(rooms.map(r => [r.id, r]));
+
+  const cellForGroups = (groupsRaw: GroupRef[]): string => {
+    if (!Array.isArray(groupsRaw) || groupsRaw.length === 0) return '';
+    const parsed: ParsedGroupText[] = groupsRaw.map(g => ({
+      subject: subjectById.get(g.subjectId)?.name ?? '',
+      teacher: g.teacherId != null ? (teacherById.get(g.teacherId)?.shortName ?? '') : '',
+      room:    g.roomId    != null ? (roomById.get(g.roomId)?.name ?? '')       : '',
+    }));
+    return serializeLessonCell(parsed);
+  };
 
   const workdays = workdaysOfWeek(fromISODate(weekMondayIso));
   let sheetsWritten = 0;
@@ -482,10 +605,7 @@ export async function exportScheduleToSheet(
         if (ov?.isCancelled) return '';
         const source = ov ?? tplByKey.get(`${c.name}::${n}`);
         if (!source) return '';
-        const groupsRaw = source.groups as unknown as GroupRef[];
-        const first = Array.isArray(groupsRaw) ? groupsRaw[0] : null;
-        if (!first) return '';
-        return subjectById.get(first.subjectId)?.name ?? '';
+        return cellForGroups(source.groups as unknown as GroupRef[]);
       }),
     );
 
