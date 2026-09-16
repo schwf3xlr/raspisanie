@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import cookie from '@fastify/cookie';
 import multipart from '@fastify/multipart';
+import rateLimit from '@fastify/rate-limit';
 import { config } from './config.js';
 import { registerRoutes } from './routes.js';
 import { registerAdminRoutes } from './routes-admin.js';
@@ -11,7 +12,12 @@ import { cleanupExpiredSessions, ensureInitialAdmin } from './auth.js';
 import { resortClassesIfNeeded, seedIfEmpty } from './seed.js';
 import { db } from './db.js';
 
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: true,
+  // Мы за Caddy на 127.0.0.1 - доверяем X-Forwarded-For от локального прокси,
+  // чтобы rate-limit видел IP реального клиента, а не 127.0.0.1.
+  trustProxy: true,
+});
 
 // В Capacitor Android WebView origin = "https://localhost". Разрешаем его и любые школьные домены.
 await app.register(cors, {
@@ -32,6 +38,15 @@ await app.register(cookie, {
 await app.register(multipart, {
   // Один файл, до 100 МБ. Отдельные поля-строки короткие.
   limits: { files: 1, fileSize: 100 * 1024 * 1024, fieldSize: 4 * 1024 },
+});
+
+// Глобальный rate-limit - защита от простого DDOS: не более 200 запросов/мин с одного IP.
+// Отдельные более строгие лимиты на login и push/register выставлены на самих роутах.
+await app.register(rateLimit, {
+  max: 200,
+  timeWindow: '1 minute',
+  // Позволяем trusted-прокси (Caddy на localhost) передать реальный IP клиента через X-Forwarded-For.
+  hook: 'preHandler',
 });
 
 await registerRoutes(app);

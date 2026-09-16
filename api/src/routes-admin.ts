@@ -34,8 +34,15 @@ function parseGroups(raw: unknown): GroupRef[] {
 
 export async function registerAdminRoutes(app: FastifyInstance) {
   // ---------- auth ----------
+  // Строгий rate-limit на login: 10 запросов в минуту с одного IP - защита от подбора пароля.
   app.post<{ Body: { login: string; password: string } }>(
-    '/api/admin/login', async (req, reply) => {
+    '/api/admin/login',
+    {
+      config: {
+        rateLimit: { max: 10, timeWindow: '1 minute' },
+      },
+    },
+    async (req, reply) => {
       const { login, password } = req.body ?? { login: '', password: '' };
       if (typeof login !== 'string' || typeof password !== 'string') {
         return reply.code(400).send({ error: 'Некорректные данные' });

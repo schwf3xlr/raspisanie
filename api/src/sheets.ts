@@ -159,6 +159,107 @@ async function resolveSheetTitleForDay(sheets: sheets_v4.Sheets, spreadsheetId: 
   return null;
 }
 
+// Возвращает и title, и sheetId (нужен для форматирования через batchUpdate.updateCells).
+async function resolveSheetMetaForDay(sheets: sheets_v4.Sheets, spreadsheetId: string, day: DayName): Promise<{ title: string; sheetId: number } | null> {
+  const meta = await sheets.spreadsheets.get({ spreadsheetId, fields: 'sheets.properties(sheetId,title)' });
+  const wanted = DAY_SHEET_TITLES[day];
+  for (const s of meta.data.sheets ?? []) {
+    const title = s.properties?.title ?? '';
+    if (title && wanted.some(w => title.trim().toLowerCase() === w.toLowerCase())) {
+      return { title, sheetId: s.properties?.sheetId ?? 0 };
+    }
+  }
+  return null;
+}
+
+// ---------- Раскраска ячеек ----------
+
+// Google палитра «тёмно-серый 1» (примерно), белый, зелёный.
+const COLOR_DISTANT = { red: 102 / 255, green: 102 / 255, blue: 102 / 255 }; // #666666
+const COLOR_WHITE   = { red: 1, green: 1, blue: 1 };
+const COLOR_GREEN   = { red: 182 / 255, green: 215 / 255, blue: 168 / 255 }; // #b6d7a8
+
+// Строит один UpdateCellsRequest с userEnteredFormat.backgroundColor для прямоугольника ячеек.
+// Rows/cols - 0-based. rowStart..rowEnd, colStart..colEnd - inclusive.
+function makeColorRequest(sheetId: number, rowStart: number, rowEnd: number, colStart: number, colEnd: number, rgb: { red: number; green: number; blue: number }): sheets_v4.Schema$Request {
+  const rows: sheets_v4.Schema$RowData[] = [];
+  for (let r = rowStart; r <= rowEnd; r++) {
+    const values: sheets_v4.Schema$CellData[] = [];
+    for (let c = colStart; c <= colEnd; c++) {
+      values.push({ userEnteredFormat: { backgroundColor: rgb } });
+    }
+    rows.push({ values });
+  }
+  return {
+    updateCells: {
+      range: { sheetId, startRowIndex: rowStart, endRowIndex: rowEnd + 1, startColumnIndex: colStart, endColumnIndex: colEnd + 1 },
+      rows,
+      fields: 'userEnteredFormat.backgroundColor',
+    },
+  };
+}
+
+// Раскраска листа при экспорте расписания на конкретную дату.
+// - Все ячейки уроков (C8:S15) сначала «белый».
+// - Заголовки классов (C7:S7) сначала «зелёный».
+// - Затем для дистантных классов - серый (шапка + все 8 уроков в колонке).
+// - Для точечных дистантных уроков - серая только ячейка урока.
+async function paintScheduleSheet(
+  sheets: sheets_v4.Sheets,
+  spreadsheetId: string,
+  sheetId: number,
+  visibleClasses: string[],                 // порядок как в шапке
+  distantWholeByClass: Set<string>,
+  distantByClassNum: Set<string>,           // «5А::3»
+): Promise<void> {
+  const colsCount = visibleClasses.length; // 0..colsCount-1 → колонки C..
+  const C_START = 2, C_END = 2 + Math.max(0, colsCount - 1);
+  const HEADER_ROW = 6;   // строка 7 (0-based = 6)
+  const LESSONS_ROWS_START = 7, LESSONS_ROWS_END = 14; // строки 8-15
+
+  const requests: sheets_v4.Schema$Request[] = [];
+  if (colsCount === 0) return;
+
+  // Базовые заливки.
+  requests.push(makeColorRequest(sheetId, HEADER_ROW, HEADER_ROW, C_START, C_END, COLOR_GREEN));
+  requests.push(makeColorRequest(sheetId, LESSONS_ROWS_START, LESSONS_ROWS_END, C_START, C_END, COLOR_WHITE));
+
+  // Дистант по классу целиком - вся колонка (шапка + уроки).
+  for (let i = 0; i < visibleClasses.length; i++) {
+    const col = C_START + i;
+    const cls = visibleClasses[i]!;
+    if (distantWholeByClass.has(cls)) {
+      requests.push(makeColorRequest(sheetId, HEADER_ROW, LESSONS_ROWS_END, col, col, COLOR_DISTANT));
+    }
+  }
+
+  // Дистант отдельного урока - только его ячейка.
+  for (let i = 0; i < visibleClasses.length; i++) {
+    const col = C_START + i;
+    const cls = visibleClasses[i]!;
+    if (distantWholeByClass.has(cls)) continue; // уже покрашен всей колонкой
+    for (let n = 1; n <= 8; n++) {
+      if (distantByClassNum.has(`${cls}::${n}`)) {
+        const row = LESSONS_ROWS_START + (n - 1);
+        requests.push(makeColorRequest(sheetId, row, row, col, col, COLOR_DISTANT));
+      }
+    }
+  }
+
+  await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
+}
+
+// Стандартное расписание (шаблон) - без дистанта. Просто «зелёная шапка + белые ячейки».
+async function paintTemplateSheet(sheets: sheets_v4.Sheets, spreadsheetId: string, sheetId: number, colsCount: number): Promise<void> {
+  if (colsCount === 0) return;
+  const C_START = 2, C_END = 2 + Math.max(0, colsCount - 1);
+  const requests: sheets_v4.Schema$Request[] = [
+    makeColorRequest(sheetId, 6, 6, C_START, C_END, COLOR_GREEN),
+    makeColorRequest(sheetId, 7, 14, C_START, C_END, COLOR_WHITE),
+  ];
+  await sheets.spreadsheets.batchUpdate({ spreadsheetId, requestBody: { requests } });
+}
+
 // ---------- Импорт стандартного расписания ----------
 
 interface ImportResult {
@@ -340,11 +441,12 @@ export async function exportTemplateToSheet(spreadsheetId: string, daysFilter: D
 
   const daysToProcess = daysFilter && daysFilter.length > 0 ? daysFilter : DAYS;
   for (const day of daysToProcess) {
-    const sheetTitle = await resolveSheetTitleForDay(sheets, spreadsheetId, day);
-    if (!sheetTitle) {
+    const meta = await resolveSheetMetaForDay(sheets, spreadsheetId, day);
+    if (!meta) {
       warnings.push(`Лист «${day}» не найден - пропущен.`);
       continue;
     }
+    const sheetTitle = meta.title;
 
     const [templates, timeSlots] = await Promise.all([
       db.lessonTemplate.findMany({ where: { day } }),
@@ -384,6 +486,8 @@ export async function exportTemplateToSheet(spreadsheetId: string, daysFilter: D
         ],
       },
     });
+    // Стандартное расписание - шапка зелёная, ячейки уроков белые (сбрасываем возможный дистант).
+    await paintTemplateSheet(sheets, spreadsheetId, meta.sheetId, cols.length);
     sheetsWritten++;
   }
 
@@ -596,11 +700,12 @@ export async function exportScheduleToSheet(
     if (!day) continue;
     const dbDate = toDbDate(iso);
 
-    const sheetTitle = await resolveSheetTitleForDay(sheets, spreadsheetId, day);
-    if (!sheetTitle) {
+    const meta = await resolveSheetMetaForDay(sheets, spreadsheetId, day);
+    if (!meta) {
       warnings.push(`Лист «${day}» не найден - пропущен.`);
       continue;
     }
+    const sheetTitle = meta.title;
 
     const [templates, overrides, distant, slots] = await Promise.all([
       db.lessonTemplate.findMany({ where: { day } }),
@@ -611,6 +716,7 @@ export async function exportScheduleToSheet(
     const tplByKey = new Map(templates.map(t => [`${t.className}::${t.number}`, t]));
     const ovByKey  = new Map(overrides.map(o => [`${o.className}::${o.number}`, o]));
     const distantWholeByClass = new Set(distant.filter(d => d.lessonNumber == null).map(d => d.className));
+    const distantByClassNum = new Set(distant.filter(d => d.lessonNumber != null).map(d => `${d.className}::${d.lessonNumber}`));
 
     const cols = classes.slice(0, 17);
 
@@ -648,6 +754,8 @@ export async function exportScheduleToSheet(
         ],
       },
     });
+    // Раскраска: белые ячейки, зелёная шапка, серый - на дистантных.
+    await paintScheduleSheet(sheets, spreadsheetId, meta.sheetId, cols.map(c => c.name), distantWholeByClass, distantByClassNum);
     sheetsWritten++;
   }
 

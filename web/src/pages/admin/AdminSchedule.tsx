@@ -101,7 +101,14 @@ export default function AdminSchedule() {
     return tpl?.groups ?? [];
   }, [overrideByKey, templateByKey]);
 
-  const conflicts = useMemo(() => computeConflicts(data?.classes ?? [], numbers, effectiveGroups), [data?.classes, numbers, effectiveGroups]);
+  const isDistantAt = useCallback(
+    (cls: string, n: number) => distantAllDay.has(cls) || distantByLesson.has(`${cls}::${n}`),
+    [distantAllDay, distantByLesson],
+  );
+  const conflicts = useMemo(
+    () => computeConflicts(data?.classes ?? [], numbers, effectiveGroups, isDistantAt),
+    [data?.classes, numbers, effectiveGroups, isDistantAt],
+  );
 
   const dataFor = useCallback((cls: string, n: number): GridCellData | null => {
     const override = overrideByKey.get(`${cls}::${n}`);
@@ -597,7 +604,12 @@ function mergeConflict(map: ConflictMap, key: string, kind: 'teacher' | 'room') 
   else if (cur !== kind) map.set(key, 'both');
 }
 
-function computeConflicts(classes: string[], numbers: number[], groupsAt: (cls: string, n: number) => AdminGroup[]): ConflictMap {
+function computeConflicts(
+  classes: string[],
+  numbers: number[],
+  groupsAt: (cls: string, n: number) => AdminGroup[],
+  isDistantAt?: (cls: string, n: number) => boolean,
+): ConflictMap {
   const map: ConflictMap = new Map();
   for (const n of numbers) {
     // teacher-конфликт: один учитель ведёт >1 класса в этот номер урока
@@ -606,6 +618,8 @@ function computeConflicts(classes: string[], numbers: number[], groupsAt: (cls: 
     const byRoom = new Map<number, string[]>();
 
     for (const c of classes) {
+      // Дистантные уроки не конфликтуют - учитель ведёт онлайн, кабинет не занят.
+      if (isDistantAt?.(c, n)) continue;
       const groups = groupsAt(c, n);
       const teachersThisCell = new Set<number>();
       const roomsThisCell = new Set<number>();

@@ -46,6 +46,8 @@ export default function AdminScheduleMobile(p: Props) {
         const tpl = p.templateByKey.get(`${c}::${n}`);
         const src = override ?? tpl;
         if (!src || override?.isCancelled) continue;
+        // Дистантный урок не занимает учителя / кабинет физически - конфликтов не считаем.
+        if (p.distantAllDay.has(c) || p.distantByLesson.has(`${c}::${n}`)) continue;
         const seenT = new Set<number>();
         const seenR = new Set<number>();
         for (const g of src.groups) {
@@ -91,7 +93,7 @@ export default function AdminScheduleMobile(p: Props) {
       for (const c of classes) mark(`${c}::${nStr}`, 'room');
     }
     return { conflictCells, teacherConflicts, roomConflicts };
-  }, [p.numbers, p.data.classes, p.overrideByKey, p.templateByKey, p.dicts]);
+  }, [p.numbers, p.data.classes, p.overrideByKey, p.templateByKey, p.dicts, p.distantAllDay, p.distantByLesson]);
 
   const activeClassConflicts = useMemo(
     () => conflictInfo.teacherConflicts.filter(c => c.classes.includes(activeClass)),

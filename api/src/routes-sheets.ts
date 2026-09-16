@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { db } from './db.js';
-import { requireRole } from './auth.js';
+import { requireAdmin, requireRole } from './auth.js';
 import {
   sheetsConfigured,
   sheetsServiceAccountEmail,
@@ -18,10 +18,10 @@ function isKind(x: unknown): x is Kind { return x === 'template' || x === 'sched
 function isDirection(x: unknown): x is Direction { return x === 'import' || x === 'export' || x === 'both'; }
 
 export async function registerSheetsRoutes(app: FastifyInstance) {
-  // Статус модуля - есть ли сервисный аккаунт, его email (админ должен расшарить таблицу).
+  // Статус модуля - доступно любому админу, чтобы UI мог показать «доступно / нет».
   app.get(
     '/api/admin/sheets/status',
-    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
     async () => {
       return {
         configured: sheetsConfigured(),
@@ -30,10 +30,10 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
     },
   );
 
-  // CRUD привязок.
+  // Список привязок - тоже любому админу; кнопки «Импорт/Экспорт» есть у обоих.
   app.get(
     '/api/admin/sheets',
-    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
     async () => {
       const rows = await db.sheetsSync.findMany({ orderBy: { id: 'asc' } });
       return { syncs: rows };
@@ -101,7 +101,7 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
   //   day       - для template, один день недели (Понедельник...Пятница).
   app.post<{ Params: { id: string }; Body?: { weekStart?: string; date?: string; day?: string } }>(
     '/api/admin/sheets/:id/import',
-    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
     async (req, reply) => {
       if (!sheetsConfigured()) return reply.code(503).send({ error: 'Sheets не сконфигурирован. См. SHEETS.md.' });
       const id = Number(req.params.id);
@@ -132,7 +132,7 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
 
   app.post<{ Params: { id: string }; Body?: { weekStart?: string; date?: string; day?: string } }>(
     '/api/admin/sheets/:id/export',
-    { preHandler: (req, reply) => requireRole('tech')(req, reply) },
+    { preHandler: (req, reply) => requireAdmin(req, reply) },
     async (req, reply) => {
       if (!sheetsConfigured()) return reply.code(503).send({ error: 'Sheets не сконфигурирован. См. SHEETS.md.' });
       const id = Number(req.params.id);

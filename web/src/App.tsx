@@ -12,6 +12,7 @@ import AdminDictionaries from './pages/admin/AdminDictionaries';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminApp from './pages/admin/AdminApp';
 import AdminSheets from './pages/admin/AdminSheets';
+import RequireRole from './pages/admin/RequireRole';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import FullGridPage from './pages/FullGridPage';
@@ -63,9 +64,10 @@ export default function App() {
           <Route path="schedule" element={<AdminSchedule />} />
           <Route path="template" element={<AdminTemplate />} />
           <Route path="dictionaries" element={<AdminDictionaries />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="app" element={<AdminApp />} />
-          <Route path="sheets" element={<AdminSheets />} />
+          <Route path="users" element={<RequireRole allow={['tech']}><AdminUsers /></RequireRole>} />
+          <Route path="app" element={<RequireRole allow={['tech']}><AdminApp /></RequireRole>} />
+          {/* Управление привязками Sheets - tech; но кнопки import/export внутри модалок работают у school тоже. */}
+          <Route path="sheets" element={<RequireRole allow={['tech']}><AdminSheets /></RequireRole>} />
         </Route>
         <Route path="*" element={<Landing />} />
       </Routes>

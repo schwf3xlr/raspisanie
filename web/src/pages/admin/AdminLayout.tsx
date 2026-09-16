@@ -147,7 +147,7 @@ export default function AdminLayout() {
       </aside>
 
       <main className="flex-1 min-w-0 md:overflow-x-auto">
-        <Outlet />
+        <Outlet context={{ role }} />
       </main>
     </div>
   );
