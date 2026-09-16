@@ -8,6 +8,7 @@ import {
   exportTemplateToSheet,
   importScheduleFromSheet,
   exportScheduleToSheet,
+  humaniseSheetsError,
 } from './sheets.js';
 
 type Kind = 'template' | 'schedule';
@@ -122,7 +123,7 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
         await db.sheetsSync.update({ where: { id }, data: { lastRunAt: new Date(), lastResult: `Импорт: ${summary}` } });
         return { ok: true, result };
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = humaniseSheetsError(err);
         await db.sheetsSync.update({ where: { id }, data: { lastRunAt: new Date(), lastResult: `Ошибка импорта: ${msg}` } }).catch(() => {});
         return reply.code(500).send({ error: msg });
       }
@@ -153,7 +154,7 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
         await db.sheetsSync.update({ where: { id }, data: { lastRunAt: new Date(), lastResult: `Экспорт: ${summary}` } });
         return { ok: true, result };
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = humaniseSheetsError(err);
         await db.sheetsSync.update({ where: { id }, data: { lastRunAt: new Date(), lastResult: `Ошибка экспорта: ${msg}` } }).catch(() => {});
         return reply.code(500).send({ error: msg });
       }

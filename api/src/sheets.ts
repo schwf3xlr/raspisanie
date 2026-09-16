@@ -1,6 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { sheets, sheets_v4 } from '@googleapis/sheets';
-import { JWT } from 'google-auth-library';
+import { sheets, auth as gauth, sheets_v4 } from '@googleapis/sheets';
 import { config, type DayName } from './config.js';
 import { db } from './db.js';
 import type { GroupRef } from './types.js';
@@ -8,7 +7,7 @@ import { dayNameFromDate, fromISODate, toDbDate, toISODate, workdaysOfWeek } fro
 
 // ---------- Auth ----------
 
-let cachedClient: JWT | null = null;
+let cachedAuth: InstanceType<typeof gauth.GoogleAuth> | null = null;
 let cachedSaEmail: string | null = null;
 
 function loadServiceAccount(): { email: string; key: string } | null {
@@ -39,19 +38,37 @@ export function sheetsServiceAccountEmail(): string | null {
 }
 
 function getClient(): sheets_v4.Sheets {
-  if (!cachedClient) {
+  if (!cachedAuth) {
     const sa = loadServiceAccount();
     if (!sa) throw new Error('Google service-account не сконфигурирован. См. SHEETS.md.');
-    cachedClient = new JWT({
-      email: sa.email,
-      key: sa.key,
+    // Используем GoogleAuth из того же экземпляра google-auth-library, что и sheets-клиент.
+    // Иначе (при передаче JWT из внешнего пакета) сервис не подхватывает access-token
+    // и запрос уходит без Authorization → «unregistered callers».
+    cachedAuth = new gauth.GoogleAuth({
+      credentials: { client_email: sa.email, private_key: sa.key },
       scopes: ['https://www.googleapis.com/auth/spreadsheets'],
     });
   }
-  // Каст через unknown - в реальном runtime JWT совместим с OAuth2Client, но у нас
-  // разошлись версии google-auth-library внутри googleapis и в корневом node_modules.
-  return sheets({ version: 'v4', auth: cachedClient as unknown as never });
+  return sheets({ version: 'v4', auth: cachedAuth });
 }
+
+// Оборачивает ошибку API, чтобы админ видел человекочитаемый текст, а не «unregistered callers».
+function humaniseSheetsError(err: unknown): string {
+  const anyErr = err as { response?: { data?: { error?: { message?: string; code?: number } } }; message?: string; code?: number };
+  const apiMsg = anyErr.response?.data?.error?.message;
+  const apiCode = anyErr.response?.data?.error?.code;
+  if (apiMsg) {
+    if (/unregistered callers/i.test(apiMsg)) {
+      return 'Google Sheets API не активирован в проекте, или токен не подписан. Включите API: https://console.cloud.google.com/apis/library/sheets.googleapis.com и перезапустите бэкенд.';
+    }
+    if (/permission|forbidden/i.test(apiMsg)) {
+      return `Нет доступа к таблице. Расшарьте её сервисному аккаунту (${sheetsServiceAccountEmail() ?? '?'}) как редактору. Оригинал: ${apiMsg}`;
+    }
+    return apiCode ? `Google API [${apiCode}]: ${apiMsg}` : `Google API: ${apiMsg}`;
+  }
+  return anyErr.message ?? String(err);
+}
+export { humaniseSheetsError };
 
 // ---------- Формат таблицы ----------
 
