@@ -1,4 +1,4 @@
-package ru.rskbot.school44.raspisanie;
+package ru.school44omsk.raspisanie;
 
 import com.getcapacitor.BridgeActivity;
 

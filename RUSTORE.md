@@ -40,7 +40,7 @@
 
 1. **Мои приложения** → **Добавить приложение**.
 2. Название: `Расписание СОШ №44` (30 символов — влезает).
-3. Пакетное имя (`applicationId`): `ru.rskbot.school44.raspisanie` — берём **точно как в** [web/capacitor.config.ts](web/capacitor.config.ts) и в [web/android/app/build.gradle](web/android/app/build.gradle). Если ошибиться — RuStore не даст обновлять его в будущем.
+3. Пакетное имя (`applicationId`): `ru.school44omsk.raspisanie` — берём **точно как в** [web/capacitor.config.ts](web/capacitor.config.ts) и в [web/android/app/build.gradle](web/android/app/build.gradle). Если ошибиться — RuStore не даст обновлять его в будущем.
 
 ## 4. Заполнить страницу приложения
 
@@ -88,7 +88,7 @@
    - `applicationId` (совпадает — ok),
    - минимальную версию Android (SDK 22+ — ok, у нас так и есть),
    - размер (<150 МБ — у нас ~10 МБ, ok).
-4. Убедись, что `versionCode` уникальный (мы всегда его бампим — сейчас 7).
+4. Убедись, что `versionCode` уникальный (мы всегда его бампим — сейчас 19, версия `2.0.0`).
 
 ## 6. Как сделать скриншоты (5 штук хватит)
 
@@ -125,14 +125,14 @@
 
 ## 8. Что поменяется у нас на сайте
 
-- Добавим кнопку **«Скачать в RuStore»** рядом с «Скачать APK» на лендинге. Это ссылка вида `https://apps.rustore.ru/app/ru.rskbot.school44.raspisanie` — она появится после публикации.
+- Добавим кнопку **«Скачать в RuStore»** рядом с «Скачать APK» на лендинге. Это ссылка вида `https://apps.rustore.ru/app/ru.school44omsk.raspisanie` — она появится после публикации.
 - Приложение обновится → сможем убрать наш самописный updater (`update-check.ts`) и `latest.json` — RuStore обновляет сам. Или **оставить оба варианта** — тогда те, кто установил через APK, обновляются нашим механизмом, а через RuStore — их встроенным.
 
 Скажешь, что тебе больше нравится — уберём или оставим.
 
 ## 9. Что сделать после публикации
 
-- Прислать мне ссылку `https://apps.rustore.ru/app/ru.rskbot.school44.raspisanie` (когда одобрят).
+- Прислать мне ссылку `https://apps.rustore.ru/app/ru.school44omsk.raspisanie` (когда одобрят).
 - Я добавлю кнопку **«Установить из RuStore»** на лендинг и в футер.
 - В FAQ можно написать: «На новых устройствах Android — ставьте из RuStore, обновления автоматически».
 
@@ -144,7 +144,7 @@
 - [ ] Feature graphic 1024×500 PNG загружен.
 - [ ] Минимум 3 скриншота (лучше 5-6).
 - [ ] Название: `Расписание СОШ №44`.
-- [ ] applicationId: `ru.rskbot.school44.raspisanie`.
+- [ ] applicationId: `ru.school44omsk.raspisanie`.
 - [ ] Короткое описание — из `rustore/short.txt`.
 - [ ] Полное описание — из `rustore/full.md`.
 - [ ] «Что нового» — из `rustore/whats-new.md`.

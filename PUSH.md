@@ -18,7 +18,7 @@
 ## 2. Зарегистрировать Android-приложение
 
 1. В обзоре проекта: значок Android (`</>` тоже есть, но нам нужен Android).
-2. **Android package name:** `ru.rskbot.school44.raspisanie` (ровно как в `web/capacitor.config.ts`).
+2. **Android package name:** `ru.school44omsk.raspisanie` (ровно как в `web/capacitor.config.ts`).
 3. Nickname: `Расписание СОШ №44`.
 4. SHA-1 — не обязателен для FCM (нужен только для Google Sign-In).
 5. **Next** → скачать **`google-services.json`**.

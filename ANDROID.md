@@ -2,7 +2,7 @@
 
 Приложение построено на **Capacitor** — React-код из `web/` работает как есть, но упакован в нативный APK.
 
-- **App ID:** `ru.rskbot.school44.raspisanie`
+- **App ID:** `ru.school44omsk.raspisanie`
 - **Название:** «Расписание СОШ №44»
 - **Domain:** `https://school.rskbot.ru` (задан в `web/.env.android`)
 
@@ -149,7 +149,7 @@ cd web/android
 Открой `web/android/app/build.gradle`, найди блок `defaultConfig`:
 ```gradle
 defaultConfig {
-    applicationId "ru.rskbot.school44.raspisanie"
+    applicationId "ru.school44omsk.raspisanie"
     minSdkVersion rootProject.ext.minSdkVersion
     targetSdkVersion rootProject.ext.targetSdkVersion
     versionCode 1               ← увеличь на 1 при каждом релизе

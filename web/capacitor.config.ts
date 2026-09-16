@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'ru.rskbot.school44.raspisanie',
+  appId: 'ru.school44omsk.raspisanie',
   appName: 'Расписание СОШ №44',
   webDir: 'dist',
   android: {

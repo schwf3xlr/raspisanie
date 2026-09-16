@@ -7,14 +7,14 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace "ru.rskbot.school44.raspisanie"
+    namespace "ru.school44omsk.raspisanie"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "ru.rskbot.school44.raspisanie"
+        applicationId "ru.school44omsk.raspisanie"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 18
-        versionName "1.5.0"
+        versionCode 19
+        versionName "2.0.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
