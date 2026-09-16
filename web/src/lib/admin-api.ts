@@ -242,9 +242,9 @@ export const adminApi = {
     req<SheetsSync>(`/sheets/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
   sheetsDelete: (id: number) =>
     req<{ ok: true }>(`/sheets/${id}`, { method: 'DELETE' }),
-  sheetsImport: (id: number, body: { weekStart?: string }) =>
+  sheetsImport: (id: number, body: { weekStart?: string; date?: string; day?: string }) =>
     req<{ ok: true; result: SheetsRunResult }>(`/sheets/${id}/import`, { method: 'POST', body: JSON.stringify(body) }),
-  sheetsExport: (id: number, body: { weekStart?: string }) =>
+  sheetsExport: (id: number, body: { weekStart?: string; date?: string; day?: string }) =>
     req<{ ok: true; result: SheetsRunResult }>(`/sheets/${id}/export`, { method: 'POST', body: JSON.stringify(body) }),
 
   // Токены push-уведомлений - только tech, для диагностики

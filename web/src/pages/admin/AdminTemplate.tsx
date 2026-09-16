@@ -6,6 +6,7 @@ import ScheduleGrid, { type GridCellData, DictSelect } from './ScheduleGrid';
 import { useGridSelection } from './useGridSelection';
 import AdminTemplateMobile from './AdminTemplateMobile';
 import BellsModal from '../../components/admin/BellsModal';
+import SheetsPickerModal from '../../components/admin/SheetsPickerModal';
 
 export default function AdminTemplate() {
   const [acknowledged, setAcknowledged] = useState(false);
@@ -13,6 +14,7 @@ export default function AdminTemplate() {
   const [data, setData] = useState<AdminTemplateResponse | null>(null);
   const [dicts, setDicts] = useState<AdminDictionaries | null>(null);
   const [bellsOpen, setBellsOpen] = useState(false);
+  const [sheetsOpen, setSheetsOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const d = await adminApi.template(day);
@@ -132,15 +134,27 @@ export default function AdminTemplate() {
               Меняйте, когда меняется постоянное расписание.
             </p>
           </div>
-          <button
-            onClick={() => setBellsOpen(true)}
-            className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark"
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
-              Звонки
-            </span>
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setSheetsOpen(true)}
+              className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark"
+              title="Импорт/экспорт этого дня в Google Таблицу"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 3v18"/></svg>
+                Google Таблицы
+              </span>
+            </button>
+            <button
+              onClick={() => setBellsOpen(true)}
+              className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
+                Звонки
+              </span>
+            </button>
+          </div>
         </div>
         <div className="flex gap-1 bg-panel-light dark:bg-panel-dark border border-line-light dark:border-line-dark rounded-full p-1 w-fit max-w-full overflow-x-auto no-scrollbar">
           {DAYS.map(d => (
@@ -198,6 +212,15 @@ export default function AdminTemplate() {
           day={day}
           initial={data.timeSlots}
           onClose={() => { setBellsOpen(false); refresh(); }}
+        />
+      )}
+      {sheetsOpen && (
+        <SheetsPickerModal
+          kind="template"
+          day={day}
+          targetLabel={day}
+          onClose={() => setSheetsOpen(false)}
+          onDone={() => refresh()}
         />
       )}
     </div>

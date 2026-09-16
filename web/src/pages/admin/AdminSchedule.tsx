@@ -10,6 +10,7 @@ import { useGridSelection } from './useGridSelection';
 import AdminScheduleMobile from './AdminScheduleMobile';
 import PublishSheet from '../../components/admin/PublishSheet';
 import DayBellsModal from '../../components/admin/DayBellsModal';
+import SheetsPickerModal from '../../components/admin/SheetsPickerModal';
 
 export default function AdminSchedule() {
   const [monday, setMonday] = useState<Date>(() => mondayOf(new Date()));
@@ -25,6 +26,7 @@ export default function AdminSchedule() {
   const [numberPopover, setNumberPopover] = useState<number | null>(null);
   const [wholeSchoolOpen, setWholeSchoolOpen] = useState(false);
   const [dayBellsOpen, setDayBellsOpen] = useState(false);
+  const [sheetsOpen, setSheetsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -278,6 +280,14 @@ export default function AdminSchedule() {
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0"/></svg>
               Звонки на день
             </button>
+            <button
+              onClick={() => setSheetsOpen(true)}
+              className="text-[13px] font-semibold text-ink-2-light dark:text-ink-2-dark hover:text-ink-light dark:hover:text-ink-dark px-3 py-2 rounded-full border border-line-light dark:border-line-dark inline-flex items-center gap-1.5"
+              title="Импорт/экспорт этого дня в Google Таблицу"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M4 9h16M4 15h16M10 3v18"/></svg>
+              Google Таблицы
+            </button>
           </div>
         </div>
 
@@ -404,6 +414,16 @@ export default function AdminSchedule() {
           overrides={data.overrides}
           onClose={() => setDayBellsOpen(false)}
           onSaved={() => { void refresh(); }}
+        />
+      )}
+
+      {sheetsOpen && (
+        <SheetsPickerModal
+          kind="schedule"
+          date={dateIso}
+          targetLabel={`${data.day}, ${fmtDate(fromISODate(dateIso))}`}
+          onClose={() => setSheetsOpen(false)}
+          onDone={() => refresh()}
         />
       )}
 

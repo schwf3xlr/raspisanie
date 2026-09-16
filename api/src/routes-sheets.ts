@@ -94,7 +94,11 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
   );
 
   // Запуск операций.
-  app.post<{ Params: { id: string }; Body?: { weekStart?: string } }>(
+  // Опции в body:
+  //   weekStart - для schedule без фильтра, применяется ко всем 5 рабочим дням.
+  //   date      - для schedule, один день; неделя вычисляется из даты.
+  //   day       - для template, один день недели (Понедельник...Пятница).
+  app.post<{ Params: { id: string }; Body?: { weekStart?: string; date?: string; day?: string } }>(
     '/api/admin/sheets/:id/import',
     { preHandler: (req, reply) => requireRole('tech')(req, reply) },
     async (req, reply) => {
@@ -107,11 +111,12 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
       try {
         let result: unknown;
         if (s.kind === 'template') {
-          result = await importTemplateFromSheet(s.spreadsheetId);
+          const day = req.body?.day ? [req.body.day as never] : null;
+          result = await importTemplateFromSheet(s.spreadsheetId, day);
         } else {
-          const weekStart = String(req.body?.weekStart ?? '').trim();
-          if (!weekStart) return reply.code(400).send({ error: 'weekStart обязателен для schedule (YYYY-MM-DD, понедельник)' });
-          result = await importScheduleFromSheet(s.spreadsheetId, weekStart);
+          const { weekStart, dates } = resolveWeekAndDates(req.body);
+          if (!weekStart) return reply.code(400).send({ error: 'weekStart или date обязателен для schedule' });
+          result = await importScheduleFromSheet(s.spreadsheetId, weekStart, dates);
         }
         const summary = summariseResult(result);
         await db.sheetsSync.update({ where: { id }, data: { lastRunAt: new Date(), lastResult: `Импорт: ${summary}` } });
@@ -124,7 +129,7 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
     },
   );
 
-  app.post<{ Params: { id: string }; Body?: { weekStart?: string } }>(
+  app.post<{ Params: { id: string }; Body?: { weekStart?: string; date?: string; day?: string } }>(
     '/api/admin/sheets/:id/export',
     { preHandler: (req, reply) => requireRole('tech')(req, reply) },
     async (req, reply) => {
@@ -137,11 +142,12 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
       try {
         let result: unknown;
         if (s.kind === 'template') {
-          result = await exportTemplateToSheet(s.spreadsheetId);
+          const day = req.body?.day ? [req.body.day as never] : null;
+          result = await exportTemplateToSheet(s.spreadsheetId, day);
         } else {
-          const weekStart = String(req.body?.weekStart ?? '').trim();
-          if (!weekStart) return reply.code(400).send({ error: 'weekStart обязателен для schedule (YYYY-MM-DD, понедельник)' });
-          result = await exportScheduleToSheet(s.spreadsheetId, weekStart);
+          const { weekStart, dates } = resolveWeekAndDates(req.body);
+          if (!weekStart) return reply.code(400).send({ error: 'weekStart или date обязателен для schedule' });
+          result = await exportScheduleToSheet(s.spreadsheetId, weekStart, dates);
         }
         const summary = summariseResult(result);
         await db.sheetsSync.update({ where: { id }, data: { lastRunAt: new Date(), lastResult: `Экспорт: ${summary}` } });
@@ -153,6 +159,24 @@ export async function registerSheetsRoutes(app: FastifyInstance) {
       }
     },
   );
+}
+
+// Утилита: из body с { weekStart? | date? } вычислить рабочий weekStart (понедельник)
+// и опциональный список дат для фильтрации.
+function resolveWeekAndDates(body: { weekStart?: string; date?: string; day?: string } | undefined): { weekStart: string | null; dates: string[] | null } {
+  const date = body?.date?.trim();
+  if (date) {
+    const d = new Date(date + 'T00:00:00');
+    const dow = d.getDay();
+    // Приводим к понедельнику.
+    const offset = dow === 0 ? -6 : (1 - dow);
+    d.setDate(d.getDate() + offset);
+    const y = d.getFullYear(), m = String(d.getMonth() + 1).padStart(2, '0'), dd = String(d.getDate()).padStart(2, '0');
+    return { weekStart: `${y}-${m}-${dd}`, dates: [date] };
+  }
+  const ws = body?.weekStart?.trim();
+  if (ws) return { weekStart: ws, dates: null };
+  return { weekStart: null, dates: null };
 }
 
 function summariseResult(r: unknown): string {

@@ -152,7 +152,8 @@ interface ImportResult {
   warnings: string[];
 }
 
-export async function importTemplateFromSheet(spreadsheetId: string): Promise<ImportResult> {
+// daysFilter=null - все 5 дней; иначе только перечисленные.
+export async function importTemplateFromSheet(spreadsheetId: string, daysFilter: DayName[] | null = null): Promise<ImportResult> {
   const sheets = getClient();
   const warnings: string[] = [];
 
@@ -201,7 +202,8 @@ export async function importTemplateFromSheet(spreadsheetId: string): Promise<Im
   let classesDistant = 0;
 
   // Собираем override для каждого дня.
-  for (const day of DAYS) {
+  const daysToProcess = daysFilter && daysFilter.length > 0 ? daysFilter : DAYS;
+  for (const day of daysToProcess) {
     const sheetTitle = await resolveSheetTitleForDay(sheets, spreadsheetId, day);
     if (!sheetTitle) {
       warnings.push(`Лист «${day}» не найден - пропущен.`);
@@ -293,7 +295,7 @@ export async function importTemplateFromSheet(spreadsheetId: string): Promise<Im
 
 // ---------- Экспорт стандартного расписания ----------
 
-export async function exportTemplateToSheet(spreadsheetId: string): Promise<{ ok: boolean; sheetsWritten: number; warnings: string[] }> {
+export async function exportTemplateToSheet(spreadsheetId: string, daysFilter: DayName[] | null = null): Promise<{ ok: boolean; sheetsWritten: number; warnings: string[] }> {
   const sheets = getClient();
   const warnings: string[] = [];
 
@@ -319,7 +321,8 @@ export async function exportTemplateToSheet(spreadsheetId: string): Promise<{ ok
 
   let sheetsWritten = 0;
 
-  for (const day of DAYS) {
+  const daysToProcess = daysFilter && daysFilter.length > 0 ? daysFilter : DAYS;
+  for (const day of daysToProcess) {
     const sheetTitle = await resolveSheetTitleForDay(sheets, spreadsheetId, day);
     if (!sheetTitle) {
       warnings.push(`Лист «${day}» не найден - пропущен.`);
@@ -374,9 +377,12 @@ export async function exportTemplateToSheet(spreadsheetId: string): Promise<{ ok
 
 // weekMondayIso - дата понедельника; импорт применит расписание на 5 рабочих дней этой недели.
 // «5А ДИСТ.» - весь день у класса помечается как дистанционный (DistantMark).
+// datesFilter=null - импорт всех 5 рабочих дней недели weekMondayIso;
+// иначе только эти даты (внутри недели или нет - неважно, каждой ищем свой день).
 export async function importScheduleFromSheet(
   spreadsheetId: string,
   weekMondayIso: string,
+  datesFilter: string[] | null = null,
 ): Promise<ImportResult & { distantMarks: number }> {
   const sheets = getClient();
   const warnings: string[] = [];
@@ -419,7 +425,9 @@ export async function importScheduleFromSheet(
     return r?.id ?? null;
   };
 
-  const workdays = workdaysOfWeek(fromISODate(weekMondayIso));
+  const allWorkdays = workdaysOfWeek(fromISODate(weekMondayIso));
+  const filterSet = datesFilter && datesFilter.length > 0 ? new Set(datesFilter) : null;
+  const workdays = filterSet ? allWorkdays.filter(d => filterSet.has(toISODate(d))) : allWorkdays;
 
   let totalLessons = 0;
   let totalSlots = 0;
@@ -535,6 +543,7 @@ export async function importScheduleFromSheet(
 export async function exportScheduleToSheet(
   spreadsheetId: string,
   weekMondayIso: string,
+  datesFilter: string[] | null = null,
 ): Promise<{ ok: boolean; sheetsWritten: number; warnings: string[] }> {
   const sheets = getClient();
   const warnings: string[] = [];
@@ -559,7 +568,9 @@ export async function exportScheduleToSheet(
     return serializeLessonCell(parsed);
   };
 
-  const workdays = workdaysOfWeek(fromISODate(weekMondayIso));
+  const allWorkdays = workdaysOfWeek(fromISODate(weekMondayIso));
+  const filterSet = datesFilter && datesFilter.length > 0 ? new Set(datesFilter) : null;
+  const workdays = filterSet ? allWorkdays.filter(d => filterSet.has(toISODate(d))) : allWorkdays;
   let sheetsWritten = 0;
 
   for (const workday of workdays) {
