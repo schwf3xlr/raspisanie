@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500" font-family="'Inter', 'Segoe UI', system-ui, sans-serif">
+  <!-- Фон в стиле лендинга: off-white с мягкими бликами -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f9f6ef"/>
+      <stop offset="100%" stop-color="#f2ede1"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#e97b3f"/>
+      <stop offset="100%" stop-color="#d95d1c"/>
+    </linearGradient>
+    <filter id="soft" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="24"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="500" fill="url(#bg)"/>
+
+  <!-- Пятна фонового акцента -->
+  <circle cx="880" cy="60" r="120" fill="#ffe6d2" filter="url(#soft)"/>
+  <circle cx="60" cy="420" r="180" fill="#efe4c8" filter="url(#soft)"/>
+
+  <!-- Левая часть: заголовок + подзаголовок + бэйдж -->
+  <g transform="translate(60, 96)">
+    <!-- Бэйдж «СОШ №44» -->
+    <g>
+      <rect x="0" y="0" width="180" height="34" rx="17" fill="#ffffff" stroke="#e0d7c5"/>
+      <circle cx="18" cy="17" r="6" fill="url(#accent)"/>
+      <text x="32" y="22.5" font-size="13" font-weight="700" fill="#4a4436" letter-spacing="1.2">СОШ №44 · ОМСК</text>
+    </g>
+
+    <!-- Заголовок -->
+    <text x="0" y="120" font-family="'GT Sectra', 'Playfair Display', ui-serif, serif" font-size="72" font-weight="500" fill="#1a1712" letter-spacing="-1.5">
+      Расписание,
+    </text>
+    <text x="0" y="200" font-family="'GT Sectra', 'Playfair Display', ui-serif, serif" font-size="72" font-weight="500" fill="#1a1712" letter-spacing="-1.5">
+      <tspan font-style="italic" fill="url(#accent)">всегда</tspan> под рукой.
+    </text>
+
+    <!-- Подзаголовок -->
+    <text x="0" y="260" font-size="19" fill="#5a5346" font-weight="500">
+      Замены, дистант, звонки, уведомления — без лишнего.
+    </text>
+
+    <!-- Три чипа-фичи -->
+    <g transform="translate(0, 300)" font-size="13" font-weight="600" fill="#3a3428">
+      <g>
+        <rect x="0" y="0" width="150" height="32" rx="16" fill="#ffffff" stroke="#e0d7c5"/>
+        <circle cx="16" cy="16" r="4" fill="#4caf50"/>
+        <text x="28" y="21">работает офлайн</text>
+      </g>
+      <g transform="translate(162, 0)">
+        <rect x="0" y="0" width="150" height="32" rx="16" fill="#ffffff" stroke="#e0d7c5"/>
+        <circle cx="16" cy="16" r="4" fill="url(#accent)"/>
+        <text x="28" y="21">тёмная тема</text>
+      </g>
+      <g transform="translate(324, 0)">
+        <rect x="0" y="0" width="140" height="32" rx="16" fill="#ffffff" stroke="#e0d7c5"/>
+        <circle cx="16" cy="16" r="4" fill="#3b7cbf"/>
+        <text x="28" y="21">без рекламы</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Правая часть: макет телефона -->
+  <g transform="translate(700, 60)">
+    <!-- Рамка телефона -->
+    <rect x="0" y="0" width="260" height="440" rx="42" fill="#141210" stroke="#2a2620" stroke-width="2"/>
+    <rect x="8" y="8" width="244" height="424" rx="36" fill="#faf6ee"/>
+    <rect x="98" y="14" width="64" height="14" rx="7" fill="#141210"/>
+
+    <!-- Внутренний UI -->
+    <g transform="translate(20, 48)" font-size="10" fill="#1a1712">
+      <!-- Верх: класс и «обновлено» -->
+      <text x="0" y="8" font-weight="600" fill="#4a4436">10А · СОШ №44</text>
+      <g transform="translate(150, 0)">
+        <circle cx="0" cy="5" r="3" fill="#3b7cbf"/>
+        <text x="8" y="8" fill="#3b7cbf" font-weight="600">обновлено</text>
+      </g>
+
+      <!-- Крупный заголовок дня -->
+      <text x="0" y="42" font-family="'GT Sectra', ui-serif, serif" font-size="28" font-weight="500" letter-spacing="-0.8">Четверг</text>
+      <text x="0" y="62" font-size="10" fill="#6b6b6b">10 сентября</text>
+      <g transform="translate(72, 52)">
+        <rect x="0" y="0" width="55" height="14" rx="7" fill="#ffe9dd"/>
+        <circle cx="9" cy="7" r="3" fill="#e97b3f"/>
+        <text x="16" y="10.5" font-size="9" font-weight="600" fill="#d95d1c">сегодня</text>
+      </g>
+
+      <!-- Разделитель -->
+      <line x1="0" y1="82" x2="220" y2="82" stroke="#ececec"/>
+
+      <!-- Уроки -->
+      <g transform="translate(0, 96)">
+        <!-- Урок 1 -->
+        <g>
+          <text x="0" y="4" font-weight="600" fill="#a3a3a3">8:30</text>
+          <text x="0" y="14" font-size="8" fill="#a3a3a3">9:15</text>
+          <rect x="26" y="-4" width="2" height="24" rx="1" fill="#ececec"/>
+          <text x="36" y="4" font-weight="600" fill="#a3a3a3">Алгебра</text>
+          <text x="36" y="15" font-size="8" fill="#a3a3a3">214 · Иванова М.С.</text>
+        </g>
+        <!-- Урок 2 (Сейчас) -->
+        <g transform="translate(0, 34)">
+          <text x="0" y="4" font-weight="600">9:25</text>
+          <text x="0" y="14" font-size="8" fill="#6b6b6b">10:10</text>
+          <rect x="26" y="-4" width="2" height="24" rx="1" fill="url(#accent)"/>
+          <text x="36" y="4" font-weight="600">Русский</text>
+          <g transform="translate(84, -3)">
+            <rect x="0" y="0" width="42" height="12" rx="6" fill="url(#accent)"/>
+            <text x="21" y="9" text-anchor="middle" font-size="8" font-weight="700" fill="#ffffff">СЕЙЧАС</text>
+          </g>
+          <text x="36" y="15" font-size="8" fill="#6b6b6b">108 · Смирнова А.П.</text>
+        </g>
+        <!-- Урок 3 -->
+        <g transform="translate(0, 68)">
+          <text x="0" y="4" font-weight="600">10:40</text>
+          <text x="0" y="14" font-size="8" fill="#6b6b6b">11:25</text>
+          <rect x="26" y="-4" width="2" height="24" rx="1" fill="#ececec"/>
+          <text x="36" y="4" font-weight="600">Литература</text>
+          <text x="36" y="15" font-size="8" fill="#6b6b6b">108 · Смирнова А.П.</text>
+        </g>
+        <!-- Урок 4 (дистант) -->
+        <g transform="translate(0, 102)">
+          <text x="0" y="4" font-weight="600">11:40</text>
+          <text x="0" y="14" font-size="8" fill="#6b6b6b">12:25</text>
+          <rect x="26" y="-4" width="2" height="24" rx="1" fill="#3b7cbf"/>
+          <text x="36" y="4" font-weight="600">Физика</text>
+          <g transform="translate(72, -3)">
+            <rect x="0" y="0" width="45" height="12" rx="6" fill="#eaf1fa"/>
+            <text x="22.5" y="9" text-anchor="middle" font-size="8" font-weight="700" fill="#3b7cbf">ДИСТАНТ</text>
+          </g>
+          <text x="36" y="15" font-size="8" fill="#3b7cbf" font-weight="600">Онлайн · Николаев В.И.</text>
+        </g>
+        <!-- Урок 5 -->
+        <g transform="translate(0, 136)">
+          <text x="0" y="4" font-weight="600">12:40</text>
+          <text x="0" y="14" font-size="8" fill="#6b6b6b">13:25</text>
+          <rect x="26" y="-4" width="2" height="24" rx="1" fill="#ececec"/>
+          <text x="36" y="4" font-weight="600">Информатика</text>
+          <text x="36" y="15" font-size="8" fill="#6b6b6b">412 · Петров Д.В.</text>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
