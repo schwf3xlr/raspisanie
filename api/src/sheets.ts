@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { google, sheets_v4 } from 'googleapis';
+import { sheets, sheets_v4 } from '@googleapis/sheets';
 import { JWT } from 'google-auth-library';
 import { config, type DayName } from './config.js';
 import { db } from './db.js';
@@ -50,7 +50,7 @@ function getClient(): sheets_v4.Sheets {
   }
   // Каст через unknown - в реальном runtime JWT совместим с OAuth2Client, но у нас
   // разошлись версии google-auth-library внутри googleapis и в корневом node_modules.
-  return google.sheets({ version: 'v4', auth: cachedClient as unknown as never });
+  return sheets({ version: 'v4', auth: cachedClient as unknown as never });
 }
 
 // ---------- Формат таблицы ----------
