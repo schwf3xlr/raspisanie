@@ -6,6 +6,7 @@ import { config } from './config.js';
 import { registerRoutes } from './routes.js';
 import { registerAdminRoutes } from './routes-admin.js';
 import { registerApkRoutes } from './routes-apk.js';
+import { registerSheetsRoutes } from './routes-sheets.js';
 import { cleanupExpiredSessions, ensureInitialAdmin } from './auth.js';
 import { resortClassesIfNeeded, seedIfEmpty } from './seed.js';
 import { db } from './db.js';
@@ -36,6 +37,7 @@ await app.register(multipart, {
 await registerRoutes(app);
 await registerAdminRoutes(app);
 await registerApkRoutes(app);
+await registerSheetsRoutes(app);
 
 try {
   const s = await seedIfEmpty();

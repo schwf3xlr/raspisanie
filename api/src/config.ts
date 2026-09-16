@@ -24,6 +24,12 @@ export const config = {
   apkDir: process.env.APK_DIR || '',
   // Публичный URL, по которому файлы из APK_DIR доступны снаружи.
   apkPublicBase: process.env.APK_PUBLIC_BASE || 'https://school.rskbot.ru/downloads',
+
+  // Сервисный аккаунт Google. Используется и для Sheets, и для FCM (можно один и тот же).
+  // Sheets-модуль читает GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON/FILE; если не задан -
+  // fallback на FCM_SERVICE_ACCOUNT_*.
+  sheetsSaJson: process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON || process.env.FCM_SERVICE_ACCOUNT_JSON || '',
+  sheetsSaFile: process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE || process.env.FCM_SERVICE_ACCOUNT_FILE || '',
 };
 
 export const DEFAULT_TIME_SLOTS: Array<{ number: number; timeStart: string; timeEnd: string }> = [

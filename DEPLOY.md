@@ -191,6 +191,10 @@ APK_PUBLIC_BASE=https://school.rskbot.ru/downloads
 
 # Push (опционально; без него бэкенд просто не шлёт уведомления)
 # FCM_SERVICE_ACCOUNT_FILE=/home/deploy/raspisanie/api/fcm-service-account.json
+
+# Синхронизация с Google Таблицами (опционально)
+# По умолчанию использует FCM_SERVICE_ACCOUNT_*. Отдельный ключ - см. SHEETS.md.
+# GOOGLE_SHEETS_SERVICE_ACCOUNT_FILE=/home/deploy/raspisanie/api/sheets-service-account.json
 ```
 
 `/var/www/downloads` должен принадлежать пользователю `deploy`
@@ -198,6 +202,7 @@ APK_PUBLIC_BASE=https://school.rskbot.ru/downloads
 иначе бэкенд не сможет туда писать APK-файлы из панели.
 
 Про push и создание Firebase-проекта — см. [PUSH.md](PUSH.md).
+Про синхронизацию с Google Таблицами (формат листов, шаринг сервисному аккаунту) — см. [SHEETS.md](SHEETS.md).
 
 Сгенерировать случайный секрет:
 ```bash

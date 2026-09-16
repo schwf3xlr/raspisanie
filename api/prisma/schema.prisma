@@ -128,6 +128,21 @@ model AdminSession {
 
 // ---------- FCM токены устройств ----------
 
+// ---------- Синхронизация с Google Sheets ----------
+
+model SheetsSync {
+  id             Int      @id @default(autoincrement())
+  // 'template' - стандартное расписание (по дням недели); 'schedule' - на конкретную неделю (override).
+  kind           String
+  // 'import' | 'export' | 'both'
+  direction      String
+  spreadsheetId  String
+  title          String?  // человеческое имя, чтобы админ различал
+  createdAt      DateTime @default(now())
+  lastRunAt      DateTime?
+  lastResult     String?  // краткий текст: "OK: 45 уроков" или ошибка
+}
+
 model DeviceToken {
   id         Int      @id @default(autoincrement())
   token      String   @unique

@@ -283,12 +283,36 @@ export default function ScheduleApp() {
               ) : (
                 <>
                   {(() => {
-                    const first = currentDay.lessons[0];
-                    if (!first || first.number <= 1 || isTeacherMode) return null;
-                    const skipped = first.number - 1;
-                    const label = skipped === 1
-                      ? 'Первого урока нет'
-                      : `Первых ${skipped}-х уроков нет`;
+                    if (isTeacherMode) return null;
+                    // Весь день дистант - плашка не нужна: сверху уже висит крупный баннер про дистант.
+                    if (currentDay.isDistantAllDay) return null;
+                    // Ищем первый ОЧНЫЙ (не дистант) урок.
+                    const firstInPerson = currentDay.lessons.find(l => !l.distant);
+                    if (!firstInPerson) return null;              // все уроки онлайн - плашка не нужна
+                    if (firstInPerson.number === 1) return null;  // в школу к 1-му, нечего сообщать
+
+                    // Что идёт до первого очного: часть может быть онлайн, часть - вообще отсутствовать.
+                    const before = currentDay.lessons.filter(l => l.number < firstInPerson.number);
+                    const distantBefore = before.filter(l => l.distant);
+                    const skippedGap = (firstInPerson.number - 1) - before.length; // сколько уроков просто нет
+
+                    let title: string;
+                    let subtitle: React.ReactNode;
+                    if (before.length === 0) {
+                      // Все первые N уроков - отсутствуют (нет в расписании).
+                      const skipped = firstInPerson.number - 1;
+                      title = skipped === 1 ? 'Первого урока нет' : `Первых ${skipped}-х уроков нет`;
+                      subtitle = <>К <b>{firstInPerson.number}-му уроку</b> - приходите к <b className="tabular-nums text-ink-light dark:text-ink-dark">{firstInPerson.timeStart}</b>.</>;
+                    } else if (before.length === distantBefore.length && skippedGap === 0) {
+                      // Все первые уроки - дистанционные (без «пропусков»).
+                      title = before.length === 1 ? 'Первый урок дистанционно' : `Первые ${before.length} уроков дистанционно`;
+                      subtitle = <>В школу - к <b>{firstInPerson.number}-му уроку</b>, к <b className="tabular-nums text-ink-light dark:text-ink-dark">{firstInPerson.timeStart}</b>.</>;
+                    } else {
+                      // Смешанное: часть дистант, часть отсутствует.
+                      title = 'Не все первые уроки в школе';
+                      subtitle = <>В школу приходите к <b>{firstInPerson.number}-му уроку</b>, к <b className="tabular-nums text-ink-light dark:text-ink-dark">{firstInPerson.timeStart}</b>. Часть уроков - дистанционно.</>;
+                    }
+
                     return (
                       <div className="mb-3 bg-accent-soft dark:bg-accent-soft-dark border border-accent/20 dark:border-accent-dark/30 rounded-2xl px-4 py-3 flex items-center gap-3">
                         <div className="w-8 h-8 rounded-xl bg-accent dark:bg-accent-dark text-white grid place-items-center shrink-0">
@@ -296,10 +320,10 @@ export default function ScheduleApp() {
                         </div>
                         <div className="min-w-0">
                           <div className="font-semibold text-accent dark:text-accent-dark text-[14px] leading-tight">
-                            {label}
+                            {title}
                           </div>
                           <div className="text-[13px] text-ink-2-light dark:text-ink-2-dark mt-0.5 leading-relaxed">
-                            К {first.number}-му уроку - приходите к <b className="tabular-nums text-ink-light dark:text-ink-dark">{first.timeStart}</b>.
+                            {subtitle}
                           </div>
                         </div>
                       </div>

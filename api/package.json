@@ -21,7 +21,8 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^16.4.5",
     "fastify": "^4.28.1",
-    "google-auth-library": "^9.15.1"
+    "google-auth-library": "^9.15.1",
+    "googleapis": "^181.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.7.4",

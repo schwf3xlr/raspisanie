@@ -144,6 +144,27 @@ export interface ApkStatus {
   files: ApkFileInfo[];
 }
 
+export interface SheetsSync {
+  id: number;
+  kind: 'template' | 'schedule';
+  direction: 'import' | 'export' | 'both';
+  spreadsheetId: string;
+  title: string | null;
+  createdAt: string;
+  lastRunAt: string | null;
+  lastResult: string | null;
+}
+
+export interface SheetsRunResult {
+  ok: boolean;
+  lessons?: number;
+  timeSlots?: number;
+  sheetsWritten?: number;
+  distantMarks?: number;
+  classesDistant?: number;
+  warnings?: string[];
+}
+
 export interface PushTokenInfo {
   id: number;
   tokenPreview: string;
@@ -211,6 +232,20 @@ export const adminApi = {
   apkSaveManifest: (m: { versionCode: number; versionName: string; apkUrl: string; changelog?: string; mandatory?: boolean }) =>
     req<{ ok: true; manifest: ApkManifest }>('/apk/manifest', { method: 'PUT', body: JSON.stringify(m) }),
   apkDeleteManifest: () => req<{ ok: true }>('/apk/manifest', { method: 'DELETE' }),
+
+  // Синхронизация с Google Sheets - только tech
+  sheetsStatus: () => req<{ configured: boolean; serviceAccountEmail: string | null }>('/sheets/status'),
+  sheetsList: () => req<{ syncs: SheetsSync[] }>('/sheets'),
+  sheetsCreate: (payload: { kind: 'template' | 'schedule'; direction: 'import' | 'export' | 'both'; spreadsheetId: string; title?: string }) =>
+    req<SheetsSync>('/sheets', { method: 'POST', body: JSON.stringify(payload) }),
+  sheetsUpdate: (id: number, payload: { kind?: 'template' | 'schedule'; direction?: 'import' | 'export' | 'both'; spreadsheetId?: string; title?: string }) =>
+    req<SheetsSync>(`/sheets/${id}`, { method: 'PUT', body: JSON.stringify(payload) }),
+  sheetsDelete: (id: number) =>
+    req<{ ok: true }>(`/sheets/${id}`, { method: 'DELETE' }),
+  sheetsImport: (id: number, body: { weekStart?: string }) =>
+    req<{ ok: true; result: SheetsRunResult }>(`/sheets/${id}/import`, { method: 'POST', body: JSON.stringify(body) }),
+  sheetsExport: (id: number, body: { weekStart?: string }) =>
+    req<{ ok: true; result: SheetsRunResult }>(`/sheets/${id}/export`, { method: 'POST', body: JSON.stringify(body) }),
 
   // Токены push-уведомлений - только tech, для диагностики
   pushTokens: () => req<{ tokens: PushTokenInfo[] }>('/push/tokens'),

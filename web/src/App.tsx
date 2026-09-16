@@ -11,6 +11,7 @@ import AdminTemplate from './pages/admin/AdminTemplate';
 import AdminDictionaries from './pages/admin/AdminDictionaries';
 import AdminUsers from './pages/admin/AdminUsers';
 import AdminApp from './pages/admin/AdminApp';
+import AdminSheets from './pages/admin/AdminSheets';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import FullGridPage from './pages/FullGridPage';
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="dictionaries" element={<AdminDictionaries />} />
           <Route path="users" element={<AdminUsers />} />
           <Route path="app" element={<AdminApp />} />
+          <Route path="sheets" element={<AdminSheets />} />
         </Route>
         <Route path="*" element={<Landing />} />
       </Routes>
